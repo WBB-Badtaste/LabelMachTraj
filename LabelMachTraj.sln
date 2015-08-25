@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LabelMachTrajDll", "LabelMachTrajDll\LabelMachTrajDll.vcxproj", "{5D545B0B-703E-4548-89DE-537DBA1B9212}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DllTest", "DllTest\DllTest.vcxproj", "{55F878E4-3026-4E02-B86E-C341B1C20C6B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5D545B0B-703E-4548-89DE-537DBA1B9212}.Debug|Win32.ActiveCfg = Debug|Win32
+		{5D545B0B-703E-4548-89DE-537DBA1B9212}.Debug|Win32.Build.0 = Debug|Win32
+		{5D545B0B-703E-4548-89DE-537DBA1B9212}.Release|Win32.ActiveCfg = Release|Win32
+		{5D545B0B-703E-4548-89DE-537DBA1B9212}.Release|Win32.Build.0 = Release|Win32
+		{55F878E4-3026-4E02-B86E-C341B1C20C6B}.Debug|Win32.ActiveCfg = Debug|Win32
+		{55F878E4-3026-4E02-B86E-C341B1C20C6B}.Debug|Win32.Build.0 = Debug|Win32
+		{55F878E4-3026-4E02-B86E-C341B1C20C6B}.Release|Win32.ActiveCfg = Release|Win32
+		{55F878E4-3026-4E02-B86E-C341B1C20C6B}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
