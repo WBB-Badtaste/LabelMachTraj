@@ -1,5 +1,5 @@
 // stdafx.cpp : source file that includes just the standard includes
-// LabelMachTrajDll.pch will be the pre-compiled header
+// LabelMachTraj.pch will be the pre-compiled header
 // stdafx.obj will contain the pre-compiled type information
 
 #include "stdafx.h"
