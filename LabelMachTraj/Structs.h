@@ -49,7 +49,7 @@ typedef struct labelMechPars
 	uint32_t haveSentSplineNum;
 
 	double baseSplineTime;
-	double lessSplineTime;
+	double lessSplineTime;//segment太多，lessSplineTime太小，可能存在发送数据来不及的情况
 	double lastSplineTime;
 
 	uint32_t maxNrOfCubPars;

@@ -33,7 +33,10 @@ NYCE_STATUS __stdcall SendSplineThrd(void * pParam)
 	uint32_t loopTimes(NYCE_MAX_NR_OF_BUFFERED_SPLINE_SEGMENTS / pMechPars->perSendSplineNum);
 
 	uint32_t restSplineNum(pMechPars->usedNrOfCubPars);
-	while(--loopTimes > 0 && restSplineNum > 0)
+	while(--loopTimes > 0 && restSplineNum > 0)//--20150911 Martin
+											   //--loopTimes，先减去1
+											   //使MCU缓冲区余量大于1次小于两次发送量
+											   //在执行第一个spline数据时马上有回调
 	{
 		if (restSplineNum > pMechPars->perSendSplineNum)
 		{
