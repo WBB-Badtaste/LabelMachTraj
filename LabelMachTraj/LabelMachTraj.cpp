@@ -2,7 +2,7 @@
 //
 #include "stdafx.h"
 
-#include "Control.h"
+#include "Interface.h"
 #include "AxisControl.h"
 
 #include <Windows.h>
@@ -30,32 +30,37 @@ int _tmain(int argc, _TCHAR* argv[])
 	LABEL_MECH_INIT_PARS initPars;
 	initPars.axId[0] = axId[0];
 	initPars.axId[1] = axId[1];
-	initPars.cameraPos[0] = 100000.0;
-	initPars.cameraPos[1] = 130450.0;
-	initPars.nozzleDeflection = 0.0;
-	initPars.nozzleInterval = 5000.0;
+	initPars.cameraPos[0] = 245;
+	initPars.cameraPos[1] = 220;
+	initPars.nozzleRelPos1[0] = 10.0;
+	initPars.nozzleRelPos1[1] = -0.1;
+	initPars.nozzleRelPos2[0] = -10.0;
+	initPars.nozzleRelPos2[1] = 0.1;
+	initPars.splineTime = 0.005;
 	initPars.pShut = shutTest;
 
 	nyceStatus = NyceError(nyceStatus) ? nyceStatus : LabelMechInit(initPars);
 
 	LABEL_MECH_MOTION_PARS motionPars;
-	motionPars.endPos[0] = 230000.0;
-	motionPars.endPos[1] = 230000.0;
-	motionPars.cameraVel = 1000000.0;
-	motionPars.maxVel[0] = 1000000.0;
-	motionPars.maxVel[1] = 1000000.0;
-	motionPars.maxAcc[0] = 10000000.0;
-	motionPars.maxAcc[1] = 10000000.0;
-	motionPars.maxJerk[0] = 100000000.0;
-	motionPars.maxJerk[1] = 100000000.0;
+	motionPars.endPos[0] = 540.0;
+	motionPars.endPos[1] = 620.0;
+	motionPars.cameraVel = 300.0;
+	motionPars.maxVel  = 300.0;
+	motionPars.maxAcc  = 30000.0;
+	motionPars.maxJerk = 3000000.0;
+	motionPars.rotaeAngle[0] = 30;
+	motionPars.rotaeAngle[1] = 30;
+	motionPars.rotaeRadius[0] = 15;
+	motionPars.rotaeRadius[1] = 15;
 	motionPars.shutterDelay = 0.1;
-	motionPars.splineTime = 0.001;
 	
 	nyceStatus = NyceError(nyceStatus) ? nyceStatus : LabelMechMoveOptTrajectory(motionPars);
 
 	nyceStatus = NyceError(nyceStatus) ? nyceStatus : LabelMechTerm();
 
 	nyceStatus = NyceError(nyceStatus) ? nyceStatus : TermAxis(NUM_AXES, axId);
+
+	printf(LabelMechGetStatusString(nyceStatus));
 
 	nyceStatus = NyceError(nyceStatus) ? nyceStatus : NyceTerm();
 

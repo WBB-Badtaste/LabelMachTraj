@@ -10,8 +10,6 @@
 
 NYCE_STATUS TarjSegmentStart(const TRAJ_SEG_START_PARS &startPars, LABEL_MECH_PARS &mechPars)
 {
-	mechPars.baseSplineTime = startPars.splineTime;
-
 	if (mechPars.cubPars[0])
 		delete[] mechPars.cubPars[0];
 	if (mechPars.cubPars[1])
@@ -118,14 +116,6 @@ NYCE_STATUS CalacCubicMotionBasePars(TRAJ_SEG_PARS *pSegPars)
 //计算所有关键点对应的路程
 NYCE_STATUS CalacSegDistance(const uint32_t &splineNum, const TRAJ_SEG_PARS* const pSegPars, LABEL_MECH_PARS &mechPars)
 {
-	double currentTime(0.0);
-	double crackle(0.0), snap(0.0), jerk(0.0), acc(0.0), vel(0.0), pos(0.0);
-
-	double pow_splintTime_2(pow(mechPars.baseSplineTime, 2));
-	double pow_splintTime_3(pow(mechPars.baseSplineTime, 3));
-	double pow_splintTime_4(pow(mechPars.baseSplineTime, 4));
-	double pow_splintTime_5(pow(mechPars.baseSplineTime, 5));
-
 	//计算12个奇点的运动参数
 	SINGULAR_POINT_PARS singularPointPars[12];
 	double time(0.0);
@@ -170,258 +160,86 @@ NYCE_STATUS CalacSegDistance(const uint32_t &splineNum, const TRAJ_SEG_PARS* con
 		if (i)
 		{
 			const double segTime(singularPointPars[i].time - singularPointPars[i - 1].time);
+			const double pow_segTime_2(segTime * segTime);
+			const double pow_segTime_3(pow_segTime_2 * segTime);
+			const double pow_segTime_4(pow_segTime_3 * segTime);
+			const double pow_segTime_5(pow_segTime_4 * segTime);
+
+			singularPointPars[i].distance = singularPointPars[i - 1].distance +  singularPointPars[i - 1].velocity * segTime + 0.5 * singularPointPars[i - 1].acceleration * pow_segTime_2 + singularPointPars[i - 1].jerk * pow_segTime_3 / 6 + singularPointPars[i - 1].snap * pow_segTime_4 / 24 + singularPointPars[i - 1].crackle * pow_segTime_5 / 120;
+			singularPointPars[i].velocity = singularPointPars[i - 1].velocity + singularPointPars[i - 1].acceleration * segTime + 0.5 * singularPointPars[i - 1].jerk * pow_segTime_2 + singularPointPars[i - 1].snap * pow_segTime_3 / 6 + singularPointPars[i - 1].crackle * pow_segTime_4 / 24;
+			singularPointPars[i].acceleration = singularPointPars[i - 1].acceleration + singularPointPars[i - 1].jerk * segTime + 0.5 * singularPointPars[i - 1].snap * pow_segTime_2 + singularPointPars[i - 1].crackle * pow_segTime_3 / 6;
+			singularPointPars[i].jerk = singularPointPars[i - 1].jerk + singularPointPars[i - 1].snap * segTime + 0.5 * singularPointPars[i - 1].crackle * pow_segTime_2;
 			singularPointPars[i].snap = singularPointPars[i - 1].snap + singularPointPars[i - 1].crackle * segTime;
 		}
 		else
 		{
-			singularPointPars[i].snap = 0.0;
-			singularPointPars[i].jerk = 0.0;
-			singularPointPars[i].acceleration = 0.0;
-			singularPointPars[i].velocity = 0.0;
 			singularPointPars[i].distance = 0.0;
+			singularPointPars[i].velocity = pSegPars->startVel;
+			singularPointPars[i].acceleration = 0.0;
+			singularPointPars[i].jerk = 0.0;
+			singularPointPars[i].snap = 0.0;
 		}
-		
 	}
 
-// 	uint32_t index(0);
-// 	for (; index < splineNum - 1; ++index)
-// 	{
-// 		currentTime = (index + 1) * mechPars.baseSplineTime;
-// 		if (currentTime < timePoint)
-// 		{
-// 			switch (uint32_t(currentTime / pSegPars->time[0]))
-// 			{
-// 			case 0:
-// 			case 3:
-// 			case 5:
-// 			case 6:
-// 				crackle =  pSegPars->crackle[0];
-// 				break;
-// 			case 1:
-// 			case 2:
-// 			case 4:
-// 			case 7:
-// 				crackle = -pSegPars->crackle[0];
-// 				break;
-// 			default:
-// 				break;
-// 			}
-// 		}
-// 		else
-// 		{
-// 			switch (uint32_t((currentTime - timePoint) / pSegPars->time[1]))
-// 			{
-// 			case 0:
-// 			case 3:
-// 			case 5:
-// 			case 6:
-// 				crackle =  pSegPars->crackle[1];
-// 				break;
-// 			case 1:
-// 			case 2:
-// 			case 4:
-// 			case 7:
-// 				crackle = -pSegPars->crackle[1];
-// 				break;
-// 			default:
-// 				break;
-// 			}
-// 		}
-// 
-// 		pos  += vel		 * mechPars.baseSplineTime + 0.5 * acc		* pow_splintTime_2 +  jerk	  * pow_splintTime_3 / 6 + snap    * pow_splintTime_4 / 24 + crackle * pow_splintTime_5 / 120;
-// 		vel  += acc		 * mechPars.baseSplineTime + 0.5 * jerk		* pow_splintTime_2 +  snap	  * pow_splintTime_3 / 6 + crackle * pow_splintTime_4 / 24;
-// 		acc  += jerk	 * mechPars.baseSplineTime + 0.5 * snap		* pow_splintTime_2 +  crackle * pow_splintTime_3 / 6;		
-// 		jerk += snap	 * mechPars.baseSplineTime + 0.5 * crackle  * pow_splintTime_2;		
-// 		snap += crackle  * mechPars.baseSplineTime;	
-// 	}
+	//计算segments
+	const double pow_baseSplintTime_2(pow(mechPars.baseSplineTime, 2));
+	const double pow_baseSplintTime_3(pow(mechPars.baseSplineTime, 3));
+	const double pow_baseSplintTime_4(pow(mechPars.baseSplineTime, 4));
+	const double pow_baseSplintTime_5(pow(mechPars.baseSplineTime, 5));
+
+	double currentTime(0.0);
+	double crackle(0.0), snap(0.0), jerk(0.0), acceleration(0.0);
+
+	uint32_t index(0);
+	uint32_t singularIndex(0);
+	for (; index < splineNum - 1; ++index)
+	{
+		currentTime = (index + 1) * mechPars.baseSplineTime;
+		if (currentTime > singularPointPars[singularIndex + 1].time)
+		{
+			++singularIndex;
+
+			const double segTime(currentTime - singularPointPars[singularIndex].time);
+			const double pow_segTime_2(pow(mechPars.baseSplineTime, 2));
+			const double pow_segTime_3(pow(mechPars.baseSplineTime, 3));
+			const double pow_segTime_4(pow(mechPars.baseSplineTime, 4));
+			const double pow_segTime_5(pow(mechPars.baseSplineTime, 5));
+
+			mechPars.segDistance[mechPars.usedNrOfCubPars + index] = singularPointPars[singularIndex].distance + singularPointPars[singularIndex].velocity * segTime + 0.5 * singularPointPars[singularIndex].acceleration * pow_segTime_2 + singularPointPars[singularIndex].jerk * pow_segTime_3 / 6 + singularPointPars[singularIndex].snap * pow_segTime_4 / 24 + singularPointPars[singularIndex].crackle * pow_segTime_5 / 120;
+			mechPars.segVelocity[mechPars.usedNrOfCubPars + index] = singularPointPars[singularIndex].velocity + singularPointPars[singularIndex].acceleration * segTime + 0.5 * singularPointPars[singularIndex].jerk * pow_segTime_2 + singularPointPars[singularIndex].snap * pow_segTime_3 / 6 + singularPointPars[singularIndex].crackle * pow_segTime_4 / 24;
+			acceleration = singularPointPars[singularIndex].acceleration + singularPointPars[singularIndex].jerk * segTime + 0.5 * singularPointPars[singularIndex].snap * pow_segTime_2 + singularPointPars[singularIndex].crackle * pow_segTime_3 / 6;
+			jerk = singularPointPars[singularIndex].jerk + singularPointPars[singularIndex].snap * segTime + 0.5 * singularPointPars[singularIndex].crackle * pow_segTime_2;
+			snap = singularPointPars[singularIndex].snap + singularPointPars[singularIndex].crackle * segTime;
+		}
+		else
+		{
+			mechPars.segDistance[mechPars.usedNrOfCubPars + index] = mechPars.segDistance[mechPars.usedNrOfCubPars + index - 1] + mechPars.segVelocity[mechPars.usedNrOfCubPars + index - 1] * mechPars.baseSplineTime + 0.5 * acceleration * pow_baseSplintTime_2 + jerk * pow_baseSplintTime_3 / 6 + snap * pow_baseSplintTime_4 / 24 + singularPointPars[singularIndex].crackle * pow_baseSplintTime_5 / 120;
+			mechPars.segVelocity[mechPars.usedNrOfCubPars + index] = mechPars.segVelocity[mechPars.usedNrOfCubPars + index - 1] + acceleration * mechPars.baseSplineTime + 0.5 * jerk * pow_baseSplintTime_2 + snap * pow_baseSplintTime_3 / 6 + singularPointPars[singularIndex].crackle * pow_baseSplintTime_4 / 24;
+			acceleration += jerk * mechPars.baseSplineTime + 0.5 * snap * pow_baseSplintTime_2 + singularPointPars[singularIndex].crackle * pow_baseSplintTime_3 / 6;
+			jerk += snap * mechPars.baseSplineTime + 0.5 * singularPointPars[singularIndex].crackle * pow_baseSplintTime_2;
+			snap += singularPointPars[singularIndex].crackle * mechPars.baseSplineTime;
+		}
+	}
+
+	mechPars.segDistance[mechPars.usedNrOfCubPars + index] = pSegPars->distance;
+	mechPars.segVelocity[mechPars.usedNrOfCubPars + index] = pSegPars->endVel;
+	mechPars.lastSplineTime = pSegPars->time[0] * 8 + pSegPars->time[1] * 8 + (splineNum - 1) * mechPars.baseSplineTime;
+
 	return NYCE_OK;
 }
 
 //直线轨迹
-NYCE_STATUS TrajSegmentCubicLine(const TRAJ_SEG_LINE_PARS &linePars, LABEL_MECH_PARS &mechPars, const uint32_t shutIndex = 0)
+NYCE_STATUS TrajSegmentCubicLine(TRAJ_SEG_LINE_PARS &linePars, LABEL_MECH_PARS &mechPars, const uint32_t shutIndex = 0)
 {
+	NYCE_STATUS nyceStatus(NYCE_OK);
+
 	if ( linePars.maxVel < linePars.endVel	 || 
 		-linePars.maxVel > linePars.endVel	 ||
 		 linePars.maxVel < linePars.startVel ||
 		-linePars.maxVel > linePars.startVel )
 		return LABEL_MACHINE_ERR_MOTION_PARS;
 
-	const double disDiff((linePars.endPos[0] - linePars.startPos[0]) * (linePars.endPos[0] - linePars.startPos[0]) + (linePars.endPos[1] - linePars.startPos[1]) * (linePars.endPos[1] - linePars.startPos[1]));
-	const double angle(atan2(linePars.endPos[1] - linePars.startPos[1], linePars.endPos[0] - linePars.startPos[0]));
-	const double time1(disDiff / (linePars.startVel + linePars.maxVel) * 0.125);
-	const double time2(disDiff / (linePars.endVel + linePars.maxVel) * 0.125);
-
-	const double pow_time1_2(pow(time1, 2));
-	const double pow_time2_2(pow(time2, 2));
-	const double pow_time1_3(pow(time1, 3));
-	const double pow_time2_3(pow(time2, 3));
-	const double pow_time1_4(pow(time1, 4));
-	const double pow_time2_4(pow(time2, 4));
-
-	const double crackle1((linePars.maxVel - linePars.startVel) / pow_time1_4 * 0.125);
-	const double crackle2((linePars.endVel - linePars.maxVel) / pow_time2_4 * 0.125);
-
-	double maxJerk0(2 * crackle1 * pow_time1_2);
-	double maxJerk1(2 * crackle2 * pow_time2_2);
-
-	double maxAcc0(2 * crackle1 * pow_time1_3);
-	double maxAcc1(2 * crackle2 * pow_time2_3);
-
-	double maxVel(linePars.startVel + 8 * crackle1 * pow_time1_4);
-
-	if (maxJerk0 >  linePars.maxJerk ||
-		maxJerk0 < -linePars.maxJerk ||
-		maxJerk1 >  linePars.maxJerk ||
-		maxJerk1 < -linePars.maxJerk )
-		return LABEL_MACHINE_ERR_TRAJ_MAX_JERK_EXCEEDED;
-
-	if (maxAcc0 >  linePars.maxAcc ||
-		maxAcc0 < -linePars.maxAcc ||
-		maxAcc1 >  linePars.maxAcc ||
-		maxAcc1 < -linePars.maxAcc )
-		return LABEL_MACHINE_ERR_TRAJ_MAX_ACCELERATION_EXCEEDED;
-
-	if (maxVel >  linePars.maxVel ||
-		maxVel < -linePars.maxVel )
-		return LABEL_MACHINE_ERR_TRAJ_MAX_VELOCITY_EXCEEDED;
-
-	//估算段数
-	const double dSplineNum((time1 * 8 + time2 * 8) / mechPars.baseSplineTime); 
-	uint32_t splineNum((uint32_t)dSplineNum);
-
-	if (dSplineNum - (double)splineNum > mechPars.lessSplineTime)
-		splineNum++;
-
-	//Buffer manage
-	if (mechPars.usedNrOfCubPars + splineNum > mechPars.maxNrOfCubPars)
-	{
-		SAC_CUB_PARS *cubsX = new SAC_CUB_PARS[mechPars.usedNrOfCubPars + splineNum + 512]();
-		SAC_CUB_PARS *cubsY = new SAC_CUB_PARS[mechPars.usedNrOfCubPars + splineNum + 512]();
-
-		memcpy(cubsX, mechPars.cubPars[0], mechPars.usedNrOfCubPars * sizeof(SAC_CUB_PARS));
-		memcpy(cubsY, mechPars.cubPars[1], mechPars.usedNrOfCubPars * sizeof(SAC_CUB_PARS));
-
-		delete[] mechPars.cubPars[0];
-		delete[] mechPars.cubPars[1];
-
-		mechPars.cubPars[0] = cubsX;
-		mechPars.cubPars[1] = cubsY;
-	}
-
-	//Calc
-	const double sinAngle(sin(angle));
-	const double cosAngle(cos(angle));
-
-	double currentTime(0.0);
-	uint32_t singal(0);
-	double timePoint(time1 * 8);
-	double cra(0.0), snap(0.0), jerk(0.0), acc(0.0), vel(linePars.startVel), pos(0.0);
-
-	double pow_splintTime_2(pow(mechPars.baseSplineTime, 2));
-	double pow_splintTime_3(pow(mechPars.baseSplineTime, 3));
-	double pow_splintTime_4(pow(mechPars.baseSplineTime, 4));
-	double pow_splintTime_5(pow(mechPars.baseSplineTime, 5));
-
-	uint32_t index(0);
-	for (; index < splineNum - 1; ++index)
-	{
-		currentTime = (index + 1) * mechPars.baseSplineTime;
-		if (currentTime < timePoint)
-		{
-			switch (uint32_t(currentTime / time1))
-			{
-			case 0:
-			case 3:
-			case 5:
-			case 6:
-				cra =  crackle1;
-				break;
-			case 1:
-			case 2:
-			case 4:
-			case 7:
-				cra = -crackle1;
-				break;
-			default:
-				break;
-			}
-		}
-		else
-		{
-			switch (uint32_t((currentTime - timePoint) / time2))
-			{
-			case 0:
-			case 3:
-			case 5:
-			case 6:
-				cra =  crackle2;
-				break;
-			case 1:
-			case 2:
-			case 4:
-			case 7:
-				cra = -crackle2;
-				break;
-			default:
-				break;
-			}
-		}
-
-		pos  +=  vel  * mechPars.baseSplineTime + 0.5 * acc  * pow_splintTime_2 +  jerk * pow_splintTime_3 / 6 + snap  * pow_splintTime_4 / 24 + cra * pow_splintTime_5 / 120;
-		vel  +=  acc  * mechPars.baseSplineTime + 0.5 * jerk * pow_splintTime_2 +  snap * pow_splintTime_3 / 6 +  cra  * pow_splintTime_4 / 24;
-		acc  += jerk  * mechPars.baseSplineTime + 0.5 * snap * pow_splintTime_2 +  cra  * pow_splintTime_3 / 6;		
-		jerk += snap  * mechPars.baseSplineTime + 0.5 * cra  * pow_splintTime_2;		
-		snap +=  cra  * mechPars.baseSplineTime;	
-
-		mechPars.cubPars[0][mechPars.usedNrOfCubPars].position = linePars.startPos[0] + pos * cosAngle;
-		mechPars.cubPars[0][mechPars.usedNrOfCubPars].velocity = vel * cosAngle;
-		mechPars.cubPars[0][mechPars.usedNrOfCubPars].splineId = mechPars.usedNrOfCubPars;
-		mechPars.cubPars[0][mechPars.usedNrOfCubPars].time = mechPars.baseSplineTime;
-		mechPars.cubPars[0][mechPars.usedNrOfCubPars].positionReference = SAC_ABSOLUTE;
-		mechPars.cubPars[0][mechPars.usedNrOfCubPars].generateEvent = mechPars.usedNrOfCubPars % mechPars.perSendSplineNum == 0 ? TRUE : FALSE;
-
-		mechPars.cubPars[1][mechPars.usedNrOfCubPars].position = linePars.startPos[1] + pos * sinAngle;
-		mechPars.cubPars[1][mechPars.usedNrOfCubPars].velocity = vel * sinAngle;
-		mechPars.cubPars[1][mechPars.usedNrOfCubPars].splineId = mechPars.usedNrOfCubPars;
-		mechPars.cubPars[1][mechPars.usedNrOfCubPars].time = mechPars.baseSplineTime;
-		mechPars.cubPars[1][mechPars.usedNrOfCubPars].positionReference = SAC_ABSOLUTE;
-		mechPars.cubPars[1][mechPars.usedNrOfCubPars].generateEvent = FALSE;
-	}
-
-	mechPars.cubPars[0][mechPars.usedNrOfCubPars].position = linePars.endPos[0];
-	mechPars.cubPars[0][mechPars.usedNrOfCubPars].velocity = linePars.endVel * cosAngle;
-	mechPars.cubPars[0][mechPars.usedNrOfCubPars].splineId = mechPars.usedNrOfCubPars;
-	mechPars.cubPars[0][mechPars.usedNrOfCubPars].time = time1 * 8 + time2 * 8 - mechPars.usedNrOfCubPars * mechPars.baseSplineTime;
-	mechPars.cubPars[0][mechPars.usedNrOfCubPars].positionReference = SAC_ABSOLUTE;
-	mechPars.cubPars[0][mechPars.usedNrOfCubPars].generateEvent = mechPars.usedNrOfCubPars % mechPars.perSendSplineNum == 0 ? TRUE : FALSE;
-	
-	mechPars.cubPars[1][mechPars.usedNrOfCubPars].position = linePars.endPos[1];
-	mechPars.cubPars[1][mechPars.usedNrOfCubPars].velocity = linePars.endVel * sinAngle;
-	mechPars.cubPars[1][mechPars.usedNrOfCubPars].splineId = mechPars.usedNrOfCubPars;
-	mechPars.cubPars[1][mechPars.usedNrOfCubPars].time = time1 * 8 + time2 * 8 - mechPars.usedNrOfCubPars * mechPars.baseSplineTime;
-	mechPars.cubPars[1][mechPars.usedNrOfCubPars].positionReference = SAC_ABSOLUTE;
-	mechPars.cubPars[1][mechPars.usedNrOfCubPars].generateEvent = FALSE;
-
-	++mechPars.usedNrOfCubPars;
-
-	if (shutIndex)
-		mechPars.shutId[shutIndex -1] = mechPars.usedNrOfCubPars - 1;
-
-	return NYCE_OK;
-} 
-
-//圆弧轨迹
-NYCE_STATUS TrajSegmentCubicArc(TRAJ_SEG_LINE_PARS &linePars, LABEL_MECH_PARS &mechPars, const uint32_t shutIndex = 0)
-{
-	NYCE_STATUS nyceStatus(NYCE_OK);
-
-	if ( linePars.maxVel < linePars.endVel	 || 
-		-linePars.maxVel > linePars.endVel	 ||
-		linePars.maxVel < linePars.startVel  ||
-		-linePars.maxVel > linePars.startVel )
-		return LABEL_MACHINE_ERR_MOTION_PARS;
-
-	linePars.distance = (linePars.endPos[0] - linePars.startPos[0]) * (linePars.endPos[0] - linePars.startPos[0]) + (linePars.endPos[1] - linePars.startPos[1]) * (linePars.endPos[1] - linePars.startPos[1]);
+	linePars.distance = sqrt((linePars.endPos[0] - linePars.startPos[0]) * (linePars.endPos[0] - linePars.startPos[0]) + (linePars.endPos[1] - linePars.startPos[1]) * (linePars.endPos[1] - linePars.startPos[1]));
 	
 	//计算运动参数
 	nyceStatus = CalacCubicMotionBasePars(&linePars);
@@ -436,63 +254,151 @@ NYCE_STATUS TrajSegmentCubicArc(TRAJ_SEG_LINE_PARS &linePars, LABEL_MECH_PARS &m
 	//管理缓冲区
 	nyceStatus = NyceError(nyceStatus) ? nyceStatus : BufferManager(splineNum, mechPars);
 
-	//Calc
+	//计算关键点路程
+	nyceStatus = NyceError(nyceStatus) ? nyceStatus : CalacSegDistance(splineNum, &linePars, mechPars);
+
+	//计算对应关键点坐标
 	const double angle(atan2(linePars.endPos[1] - linePars.startPos[1], linePars.endPos[0] - linePars.startPos[0]));
 	const double sinAngle(sin(angle));
 	const double cosAngle(cos(angle));
 
-// 	
-// 
-// 		mechPars.cubPars[0][mechPars.usedNrOfCubPars].position = linePars.startPos[0] + pos * cosAngle;
-// 		mechPars.cubPars[0][mechPars.usedNrOfCubPars].velocity = vel * cosAngle;
-// 		mechPars.cubPars[0][mechPars.usedNrOfCubPars].splineId = mechPars.usedNrOfCubPars;
-// 		mechPars.cubPars[0][mechPars.usedNrOfCubPars].time = mechPars.baseSplineTime;
-// 		mechPars.cubPars[0][mechPars.usedNrOfCubPars].positionReference = SAC_ABSOLUTE;
-// 		mechPars.cubPars[0][mechPars.usedNrOfCubPars].generateEvent = mechPars.usedNrOfCubPars % mechPars.perSendSplineNum == 0 ? TRUE : FALSE;
-// 
-// 		mechPars.cubPars[1][mechPars.usedNrOfCubPars].position = linePars.startPos[1] + pos * sinAngle;
-// 		mechPars.cubPars[1][mechPars.usedNrOfCubPars].velocity = vel * sinAngle;
-// 		mechPars.cubPars[1][mechPars.usedNrOfCubPars].splineId = mechPars.usedNrOfCubPars;
-// 		mechPars.cubPars[1][mechPars.usedNrOfCubPars].time = mechPars.baseSplineTime;
-// 		mechPars.cubPars[1][mechPars.usedNrOfCubPars].positionReference = SAC_ABSOLUTE;
-// 		mechPars.cubPars[1][mechPars.usedNrOfCubPars].generateEvent = FALSE;
-// 	}
-// 
-// 	mechPars.cubPars[0][mechPars.usedNrOfCubPars].position = linePars.endPos[0];
-// 	mechPars.cubPars[0][mechPars.usedNrOfCubPars].velocity = linePars.endVel * cosAngle;
-// 	mechPars.cubPars[0][mechPars.usedNrOfCubPars].splineId = mechPars.usedNrOfCubPars;
-// 	mechPars.cubPars[0][mechPars.usedNrOfCubPars].time = time1 * 8 + time2 * 8 - mechPars.usedNrOfCubPars * mechPars.baseSplineTime;
-// 	mechPars.cubPars[0][mechPars.usedNrOfCubPars].positionReference = SAC_ABSOLUTE;
-// 	mechPars.cubPars[0][mechPars.usedNrOfCubPars].generateEvent = mechPars.usedNrOfCubPars % mechPars.perSendSplineNum == 0 ? TRUE : FALSE;
-// 
-// 	mechPars.cubPars[1][mechPars.usedNrOfCubPars].position = linePars.endPos[1];
-// 	mechPars.cubPars[1][mechPars.usedNrOfCubPars].velocity = linePars.endVel * sinAngle;
-// 	mechPars.cubPars[1][mechPars.usedNrOfCubPars].splineId = mechPars.usedNrOfCubPars;
-// 	mechPars.cubPars[1][mechPars.usedNrOfCubPars].time = time1 * 8 + time2 * 8 - mechPars.usedNrOfCubPars * mechPars.baseSplineTime;
-// 	mechPars.cubPars[1][mechPars.usedNrOfCubPars].positionReference = SAC_ABSOLUTE;
-// 	mechPars.cubPars[1][mechPars.usedNrOfCubPars].generateEvent = FALSE;
-// 
-// 	++mechPars.usedNrOfCubPars;
-// 
-// 	if (shutIndex)
-// 		mechPars.shutId[shutIndex -1] = mechPars.usedNrOfCubPars - 1;
+	for (uint32_t index = 0; index < splineNum - 1; ++index, ++mechPars.usedNrOfCubPars)
+	{
+		mechPars.cubPars[0][mechPars.usedNrOfCubPars].position = linePars.startPos[0] + mechPars.segDistance[mechPars.usedNrOfCubPars] * cosAngle;
+		mechPars.cubPars[0][mechPars.usedNrOfCubPars].velocity = mechPars.segVelocity[mechPars.usedNrOfCubPars] * cosAngle;
+		mechPars.cubPars[0][mechPars.usedNrOfCubPars].splineId = mechPars.usedNrOfCubPars;
+		mechPars.cubPars[0][mechPars.usedNrOfCubPars].time = mechPars.baseSplineTime;
+		mechPars.cubPars[0][mechPars.usedNrOfCubPars].positionReference = SAC_ABSOLUTE;
+		mechPars.cubPars[0][mechPars.usedNrOfCubPars].generateEvent = mechPars.usedNrOfCubPars % mechPars.perSendSplineNum == 0 ? TRUE : FALSE;
+							
+		mechPars.cubPars[1][mechPars.usedNrOfCubPars].position = linePars.startPos[1] + mechPars.segDistance[mechPars.usedNrOfCubPars] * sinAngle;
+		mechPars.cubPars[1][mechPars.usedNrOfCubPars].velocity = mechPars.segVelocity[mechPars.usedNrOfCubPars] * sinAngle;
+		mechPars.cubPars[1][mechPars.usedNrOfCubPars].splineId = mechPars.usedNrOfCubPars;
+		mechPars.cubPars[1][mechPars.usedNrOfCubPars].time = mechPars.baseSplineTime;
+		mechPars.cubPars[1][mechPars.usedNrOfCubPars].positionReference = SAC_ABSOLUTE;
+		mechPars.cubPars[1][mechPars.usedNrOfCubPars].generateEvent = FALSE;
+	}
+
+	mechPars.cubPars[0][mechPars.usedNrOfCubPars].position = linePars.endPos[0];
+	mechPars.cubPars[0][mechPars.usedNrOfCubPars].velocity = linePars.endVel * cosAngle;
+	mechPars.cubPars[0][mechPars.usedNrOfCubPars].splineId = mechPars.usedNrOfCubPars;
+	mechPars.cubPars[0][mechPars.usedNrOfCubPars].time = mechPars.lastSplineTime;
+	mechPars.cubPars[0][mechPars.usedNrOfCubPars].positionReference = SAC_ABSOLUTE;
+	mechPars.cubPars[0][mechPars.usedNrOfCubPars].generateEvent = mechPars.usedNrOfCubPars % mechPars.perSendSplineNum == 0 ? TRUE : FALSE;
+
+	mechPars.cubPars[1][mechPars.usedNrOfCubPars].position = linePars.endPos[1];
+	mechPars.cubPars[1][mechPars.usedNrOfCubPars].velocity = linePars.endVel * sinAngle;
+	mechPars.cubPars[1][mechPars.usedNrOfCubPars].splineId = mechPars.usedNrOfCubPars;
+	mechPars.cubPars[1][mechPars.usedNrOfCubPars].time = mechPars.lastSplineTime;
+	mechPars.cubPars[1][mechPars.usedNrOfCubPars].positionReference = SAC_ABSOLUTE;
+	mechPars.cubPars[1][mechPars.usedNrOfCubPars].generateEvent = FALSE;
+
+	if (shutIndex)
+	{
+		mechPars.cubPars[0][mechPars.usedNrOfCubPars].generateEvent = TRUE;
+		mechPars.shutId[shutIndex - 1] = mechPars.usedNrOfCubPars;
+	}
 
 	return NYCE_OK;
 } 
                    
+//圆弧轨迹
+NYCE_STATUS TrajSegmentCubicArc(TRAJ_SEG_ARC_PARS &arcPars, LABEL_MECH_PARS &mechPars, const uint32_t shutIndex = 0)
+{
+	NYCE_STATUS nyceStatus(NYCE_OK);
+
+	if ( arcPars.maxVel < arcPars.endVel   || 
+		-arcPars.maxVel > arcPars.endVel   ||
+		 arcPars.maxVel < arcPars.startVel ||
+		-arcPars.maxVel > arcPars.startVel )
+		return LABEL_MACHINE_ERR_MOTION_PARS;
+
+	const double radius(sqrt((arcPars.center[0] - arcPars.startPos[0]) * (arcPars.center[0] - arcPars.startPos[0]) + (arcPars.center[1] - arcPars.startPos[1]) * (arcPars.center[1] - arcPars.startPos[1])));
+	arcPars.distance = arcPars.angle >= 0 ? radius * arcPars.angle : -radius * arcPars.angle;
+
+	//计算运动参数
+	nyceStatus = CalacCubicMotionBasePars(&arcPars);
+
+	//估算段数
+	const double dSplineNum((arcPars.time[0] * 8 + arcPars.time[1] * 8) / mechPars.baseSplineTime); 
+	uint32_t splineNum((uint32_t)dSplineNum);
+
+	if (dSplineNum - (double)splineNum > mechPars.lessSplineTime)
+		splineNum++;
+
+	//管理缓冲区
+	nyceStatus = NyceError(nyceStatus) ? nyceStatus : BufferManager(splineNum, mechPars);
+
+	//计算关键点路程
+	nyceStatus = NyceError(nyceStatus) ? nyceStatus : CalacSegDistance(splineNum, &arcPars, mechPars);
+
+	//计算对应关键点坐标
+	const double startAngle(atan2(arcPars.startPos[1] - arcPars.center[1], arcPars.startPos[0] - arcPars.center[0]));
+
+	for (uint32_t index = 0; index < splineNum; ++index, ++mechPars.usedNrOfCubPars)
+	{
+		const double currentAngle(arcPars.angle > 0 ? startAngle - mechPars.segDistance[mechPars.usedNrOfCubPars] / radius : startAngle + mechPars.segDistance[mechPars.usedNrOfCubPars] / radius);
+		const double cosAngle(cos(currentAngle));
+		const double sinAngle(sin(currentAngle));
+		const double velocity(arcPars.angle > 0 ? mechPars.segVelocity[mechPars.usedNrOfCubPars] : -mechPars.segVelocity[mechPars.usedNrOfCubPars]);
+
+		if (index == splineNum - 1)
+		{
+			mechPars.cubPars[0][mechPars.usedNrOfCubPars].position = arcPars.endPos[0];
+			mechPars.cubPars[0][mechPars.usedNrOfCubPars].velocity = -velocity * sinAngle;
+			mechPars.cubPars[0][mechPars.usedNrOfCubPars].splineId = mechPars.usedNrOfCubPars;
+			mechPars.cubPars[0][mechPars.usedNrOfCubPars].time = mechPars.lastSplineTime;
+			mechPars.cubPars[0][mechPars.usedNrOfCubPars].positionReference = SAC_ABSOLUTE;
+			mechPars.cubPars[0][mechPars.usedNrOfCubPars].generateEvent = mechPars.usedNrOfCubPars % mechPars.perSendSplineNum == 0 ? TRUE : FALSE;
+
+			mechPars.cubPars[1][mechPars.usedNrOfCubPars].position = arcPars.endPos[1];
+			mechPars.cubPars[1][mechPars.usedNrOfCubPars].velocity = velocity * cosAngle;
+			mechPars.cubPars[1][mechPars.usedNrOfCubPars].splineId = mechPars.usedNrOfCubPars;
+			mechPars.cubPars[1][mechPars.usedNrOfCubPars].time = mechPars.lastSplineTime;
+			mechPars.cubPars[1][mechPars.usedNrOfCubPars].positionReference = SAC_ABSOLUTE;
+			mechPars.cubPars[1][mechPars.usedNrOfCubPars].generateEvent = FALSE;
+		}
+		else
+		{
+			mechPars.cubPars[0][mechPars.usedNrOfCubPars].position = arcPars.startPos[0] + radius * cosAngle;
+			mechPars.cubPars[0][mechPars.usedNrOfCubPars].velocity = -velocity * sinAngle;
+			mechPars.cubPars[0][mechPars.usedNrOfCubPars].splineId = mechPars.usedNrOfCubPars;
+			mechPars.cubPars[0][mechPars.usedNrOfCubPars].time = mechPars.baseSplineTime;
+			mechPars.cubPars[0][mechPars.usedNrOfCubPars].positionReference = SAC_ABSOLUTE;
+			mechPars.cubPars[0][mechPars.usedNrOfCubPars].generateEvent = mechPars.usedNrOfCubPars % mechPars.perSendSplineNum == 0 ? TRUE : FALSE;
+
+			mechPars.cubPars[1][mechPars.usedNrOfCubPars].position = arcPars.startPos[1] + radius * sinAngle;
+			mechPars.cubPars[1][mechPars.usedNrOfCubPars].velocity = velocity * cosAngle;
+			mechPars.cubPars[1][mechPars.usedNrOfCubPars].splineId = mechPars.usedNrOfCubPars;
+			mechPars.cubPars[1][mechPars.usedNrOfCubPars].time = mechPars.baseSplineTime;
+			mechPars.cubPars[1][mechPars.usedNrOfCubPars].positionReference = SAC_ABSOLUTE;
+			mechPars.cubPars[1][mechPars.usedNrOfCubPars].generateEvent = FALSE;
+		}
+	}
+
+	if (shutIndex)
+	{
+		mechPars.cubPars[0][mechPars.usedNrOfCubPars].generateEvent = TRUE;
+		mechPars.shutId[shutIndex - 1] = mechPars.usedNrOfCubPars;
+	}
+
+	return NYCE_OK;
+} 
 
 
 
-//拓展曲线轨迹，未完善
+
+
+//拓展曲线轨迹，未完成
 NYCE_STATUS TrajSegmentCubicCurve(const TRAJ_SEG_CURVE_PARS &curvePars, LABEL_MECH_PARS &mechPars, const uint32_t shutIndex = 0)
 {
 	if ( curvePars.maxVel[0] < curvePars.endVel[0]	 || 
 		-curvePars.maxVel[0] > curvePars.endVel[0]	 ||
 		curvePars.maxVel[1] < curvePars.endVel[1]	 || 
 		-curvePars.maxVel[1] > curvePars.endVel[1]	 ||
-		curvePars.maxVel[0] < curvePars.startVel[0] ||
+		curvePars.maxVel[0] < curvePars.startVel[0]  ||
 		-curvePars.maxVel[0] > curvePars.startVel[0] ||
-		curvePars.maxVel[1] < curvePars.startVel[1] ||
+		curvePars.maxVel[1] < curvePars.startVel[1]  ||
 		-curvePars.maxVel[1] > curvePars.startVel[1] )
 		return LABEL_MACHINE_ERR_MOTION_PARS;
 
@@ -753,3 +659,176 @@ NYCE_STATUS TrajSegmentCubicCurve(const TRAJ_SEG_CURVE_PARS &curvePars, LABEL_ME
 
 	return NYCE_OK;
 }
+
+//旧直线轨迹
+// NYCE_STATUS TrajSegmentCubicLine(const TRAJ_SEG_LINE_PARS &linePars, LABEL_MECH_PARS &mechPars, const uint32_t shutIndex = 0)
+// {
+// 	if ( linePars.maxVel < linePars.endVel	 || 
+// 		-linePars.maxVel > linePars.endVel	 ||
+// 		 linePars.maxVel < linePars.startVel ||
+// 		-linePars.maxVel > linePars.startVel )
+// 		return LABEL_MACHINE_ERR_MOTION_PARS;
+// 
+// 	const double disDiff((linePars.endPos[0] - linePars.startPos[0]) * (linePars.endPos[0] - linePars.startPos[0]) + (linePars.endPos[1] - linePars.startPos[1]) * (linePars.endPos[1] - linePars.startPos[1]));
+// 	const double angle(atan2(linePars.endPos[1] - linePars.startPos[1], linePars.endPos[0] - linePars.startPos[0]));
+// 	const double time1(disDiff / (linePars.startVel + linePars.maxVel) * 0.125);
+// 	const double time2(disDiff / (linePars.endVel + linePars.maxVel) * 0.125);
+// 
+// 	const double pow_time1_2(pow(time1, 2));
+// 	const double pow_time2_2(pow(time2, 2));
+// 	const double pow_time1_3(pow(time1, 3));
+// 	const double pow_time2_3(pow(time2, 3));
+// 	const double pow_time1_4(pow(time1, 4));
+// 	const double pow_time2_4(pow(time2, 4));
+// 
+// 	const double crackle1((linePars.maxVel - linePars.startVel) / pow_time1_4 * 0.125);
+// 	const double crackle2((linePars.endVel - linePars.maxVel) / pow_time2_4 * 0.125);
+// 
+// 	double maxJerk0(2 * crackle1 * pow_time1_2);
+// 	double maxJerk1(2 * crackle2 * pow_time2_2);
+// 
+// 	double maxAcc0(2 * crackle1 * pow_time1_3);
+// 	double maxAcc1(2 * crackle2 * pow_time2_3);
+// 
+// 	double maxVel(linePars.startVel + 8 * crackle1 * pow_time1_4);
+// 
+// 	if (maxJerk0 >  linePars.maxJerk ||
+// 		maxJerk0 < -linePars.maxJerk ||
+// 		maxJerk1 >  linePars.maxJerk ||
+// 		maxJerk1 < -linePars.maxJerk )
+// 		return LABEL_MACHINE_ERR_TRAJ_MAX_JERK_EXCEEDED;
+// 
+// 	if (maxAcc0 >  linePars.maxAcc ||
+// 		maxAcc0 < -linePars.maxAcc ||
+// 		maxAcc1 >  linePars.maxAcc ||
+// 		maxAcc1 < -linePars.maxAcc )
+// 		return LABEL_MACHINE_ERR_TRAJ_MAX_ACCELERATION_EXCEEDED;
+// 
+// 	if (maxVel >  linePars.maxVel ||
+// 		maxVel < -linePars.maxVel )
+// 		return LABEL_MACHINE_ERR_TRAJ_MAX_VELOCITY_EXCEEDED;
+// 
+// 	//估算段数
+// 	const double dSplineNum((time1 * 8 + time2 * 8) / mechPars.baseSplineTime); 
+// 	uint32_t splineNum((uint32_t)dSplineNum);
+// 
+// 	if (dSplineNum - (double)splineNum > mechPars.lessSplineTime)
+// 		splineNum++;
+// 
+// 	//Buffer manage
+// 	if (mechPars.usedNrOfCubPars + splineNum > mechPars.maxNrOfCubPars)
+// 	{
+// 		SAC_CUB_PARS *cubsX = new SAC_CUB_PARS[mechPars.usedNrOfCubPars + splineNum + 512]();
+// 		SAC_CUB_PARS *cubsY = new SAC_CUB_PARS[mechPars.usedNrOfCubPars + splineNum + 512]();
+// 
+// 		memcpy(cubsX, mechPars.cubPars[0], mechPars.usedNrOfCubPars * sizeof(SAC_CUB_PARS));
+// 		memcpy(cubsY, mechPars.cubPars[1], mechPars.usedNrOfCubPars * sizeof(SAC_CUB_PARS));
+// 
+// 		delete[] mechPars.cubPars[0];
+// 		delete[] mechPars.cubPars[1];
+// 
+// 		mechPars.cubPars[0] = cubsX;
+// 		mechPars.cubPars[1] = cubsY;
+// 	}
+// 
+// 	//Calc
+// 	const double sinAngle(sin(angle));
+// 	const double cosAngle(cos(angle));
+// 
+// 	double currentTime(0.0);
+// 	uint32_t singal(0);
+// 	double timePoint(time1 * 8);
+// 	double cra(0.0), snap(0.0), jerk(0.0), acc(0.0), vel(linePars.startVel), pos(0.0);
+// 
+// 	double pow_splintTime_2(pow(mechPars.baseSplineTime, 2));
+// 	double pow_splintTime_3(pow(mechPars.baseSplineTime, 3));
+// 	double pow_splintTime_4(pow(mechPars.baseSplineTime, 4));
+// 	double pow_splintTime_5(pow(mechPars.baseSplineTime, 5));
+// 
+// 	uint32_t index(0);
+// 	for (; index < splineNum - 1; ++index)
+// 	{
+// 		currentTime = (index + 1) * mechPars.baseSplineTime;
+// 		if (currentTime < timePoint)
+// 		{
+// 			switch (uint32_t(currentTime / time1))
+// 			{
+// 			case 0:
+// 			case 3:
+// 			case 5:
+// 			case 6:
+// 				cra =  crackle1;
+// 				break;
+// 			case 1:
+// 			case 2:
+// 			case 4:
+// 			case 7:
+// 				cra = -crackle1;
+// 				break;
+// 			default:
+// 				break;
+// 			}
+// 		}
+// 		else
+// 		{
+// 			switch (uint32_t((currentTime - timePoint) / time2))
+// 			{
+// 			case 0:
+// 			case 3:
+// 			case 5:
+// 			case 6:
+// 				cra =  crackle2;
+// 				break;
+// 			case 1:
+// 			case 2:
+// 			case 4:
+// 			case 7:
+// 				cra = -crackle2;
+// 				break;
+// 			default:
+// 				break;
+// 			}
+// 		}
+// 
+// 		pos  +=  vel  * mechPars.baseSplineTime + 0.5 * acc  * pow_splintTime_2 +  jerk * pow_splintTime_3 / 6 + snap  * pow_splintTime_4 / 24 + cra * pow_splintTime_5 / 120;
+// 		vel  +=  acc  * mechPars.baseSplineTime + 0.5 * jerk * pow_splintTime_2 +  snap * pow_splintTime_3 / 6 +  cra  * pow_splintTime_4 / 24;
+// 		acc  += jerk  * mechPars.baseSplineTime + 0.5 * snap * pow_splintTime_2 +  cra  * pow_splintTime_3 / 6;		
+// 		jerk += snap  * mechPars.baseSplineTime + 0.5 * cra  * pow_splintTime_2;		
+// 		snap +=  cra  * mechPars.baseSplineTime;	
+// 
+// 		mechPars.cubPars[0][mechPars.usedNrOfCubPars].position = linePars.startPos[0] + pos * cosAngle;
+// 		mechPars.cubPars[0][mechPars.usedNrOfCubPars].velocity = vel * cosAngle;
+// 		mechPars.cubPars[0][mechPars.usedNrOfCubPars].splineId = mechPars.usedNrOfCubPars;
+// 		mechPars.cubPars[0][mechPars.usedNrOfCubPars].time = mechPars.baseSplineTime;
+// 		mechPars.cubPars[0][mechPars.usedNrOfCubPars].positionReference = SAC_ABSOLUTE;
+// 		mechPars.cubPars[0][mechPars.usedNrOfCubPars].generateEvent = mechPars.usedNrOfCubPars % mechPars.perSendSplineNum == 0 ? TRUE : FALSE;
+// 
+// 		mechPars.cubPars[1][mechPars.usedNrOfCubPars].position = linePars.startPos[1] + pos * sinAngle;
+// 		mechPars.cubPars[1][mechPars.usedNrOfCubPars].velocity = vel * sinAngle;
+// 		mechPars.cubPars[1][mechPars.usedNrOfCubPars].splineId = mechPars.usedNrOfCubPars;
+// 		mechPars.cubPars[1][mechPars.usedNrOfCubPars].time = mechPars.baseSplineTime;
+// 		mechPars.cubPars[1][mechPars.usedNrOfCubPars].positionReference = SAC_ABSOLUTE;
+// 		mechPars.cubPars[1][mechPars.usedNrOfCubPars].generateEvent = FALSE;
+// 	}
+// 
+// 	mechPars.cubPars[0][mechPars.usedNrOfCubPars].position = linePars.endPos[0];
+// 	mechPars.cubPars[0][mechPars.usedNrOfCubPars].velocity = linePars.endVel * cosAngle;
+// 	mechPars.cubPars[0][mechPars.usedNrOfCubPars].splineId = mechPars.usedNrOfCubPars;
+// 	mechPars.cubPars[0][mechPars.usedNrOfCubPars].time = time1 * 8 + time2 * 8 - mechPars.usedNrOfCubPars * mechPars.baseSplineTime;
+// 	mechPars.cubPars[0][mechPars.usedNrOfCubPars].positionReference = SAC_ABSOLUTE;
+// 	mechPars.cubPars[0][mechPars.usedNrOfCubPars].generateEvent = mechPars.usedNrOfCubPars % mechPars.perSendSplineNum == 0 ? TRUE : FALSE;
+// 	
+// 	mechPars.cubPars[1][mechPars.usedNrOfCubPars].position = linePars.endPos[1];
+// 	mechPars.cubPars[1][mechPars.usedNrOfCubPars].velocity = linePars.endVel * sinAngle;
+// 	mechPars.cubPars[1][mechPars.usedNrOfCubPars].splineId = mechPars.usedNrOfCubPars;
+// 	mechPars.cubPars[1][mechPars.usedNrOfCubPars].time = time1 * 8 + time2 * 8 - mechPars.usedNrOfCubPars * mechPars.baseSplineTime;
+// 	mechPars.cubPars[1][mechPars.usedNrOfCubPars].positionReference = SAC_ABSOLUTE;
+// 	mechPars.cubPars[1][mechPars.usedNrOfCubPars].generateEvent = FALSE;
+// 
+// 	++mechPars.usedNrOfCubPars;
+// 
+// 	if (shutIndex)
+// 		mechPars.shutId[shutIndex -1] = mechPars.usedNrOfCubPars - 1;
+// 
+// 	return NYCE_OK;
+// } 

@@ -7,29 +7,24 @@ typedef struct labelMechPars
 		haveInited(FALSE),
 		streamTimeOut(FALSE),
 		groupId(0),
-		nozzleInterval(0.0),
-		nozzleDeflection(0.0),
 		perSendSplineNum(0),
 		haveSentSplineNum(0),
 		baseSplineTime(0.0),
 		lessSplineTime(0.0),
 		maxNrOfCubPars(0),
 		usedNrOfCubPars(0),
-		shutOffest(0.0),
 		pShut(nullptr)
 	{
 		axId[0] = 0;
 		axId[1] = 0;
 		varId[0] = 0;
 		varId[1] = 0;
-		cameraPos[0] = 0;
-		cameraPos[1] = 0;
-		firstShutPos[0] = 0;
-		firstShutPos[1] = 0;
-		SecondShutPos[0] = 0;
-		SecondShutPos[1] = 0;
-		finishShutPos[0] = 0;
-		finishShutPos[1] = 0;
+		cameraPos[0] = 0.0;
+		cameraPos[1] = 0.0;
+		nozzleRelPos1[0] = 0.0;
+		nozzleRelPos1[1] = 0.0;
+		nozzleRelPos2[0] = 0.0;
+		nozzleRelPos2[1] = 0.0;
 		cubPars[0] = nullptr;
 		cubPars[1] = nullptr;
 		shutId[0] = 0;
@@ -44,36 +39,34 @@ typedef struct labelMechPars
 	SAC_VAR_ID varId[2];
 
 	double cameraPos[2];
-	double nozzleInterval;
-	double nozzleDeflection;
-
-	double firstShutPos[2];
-	double SecondShutPos[2];
-	double finishShutPos[2];
+	double nozzleRelPos1[2];
+	double nozzleRelPos2[2];
 
 	SAC_CUB_PARS *cubPars[2];
 	double *segDistance;
 	double *segVelocity;
 	uint32_t perSendSplineNum;
 	uint32_t haveSentSplineNum;
+
 	double baseSplineTime;
 	double lessSplineTime;
+	double lastSplineTime;
+
 	uint32_t maxNrOfCubPars;
 	uint32_t usedNrOfCubPars;
+
 	uint32_t shutId[2];//拍照的splineID
-	double shutOffest;
 
 	void (*pShut)(void);
 }LABEL_MECH_PARS;
 
 typedef struct trajSegStartPars 
 {
-	trajSegStartPars():splineTime(0.0)
+	trajSegStartPars()
 	{
 		startPos[0] = startPos [1] = 0.0;
 	}
 	double startPos[2];
-	double splineTime;
 }TRAJ_SEG_START_PARS;
 
 typedef struct trajSegPars
@@ -91,14 +84,14 @@ typedef struct trajSegPars
 		crackle[0] = 0.0;
 		crackle[1] = 0.0;
 	}
-	double distance;//正数
+	double distance;//*正数
 	double startVel;//正数
 	double endVel;//正数
 	double maxVel;//正数
 	double maxAcc;//正数
 	double maxJerk;//正数
-	double time[2];//正数
-	double crackle[2];
+	double time[2];//*正数
+	double crackle[2];//*
 }TRAJ_SEG_PARS;
 
 typedef struct trajSegLinePars : trajSegPars
@@ -117,20 +110,36 @@ typedef struct trajSegLinePars : trajSegPars
 
 typedef struct trajSegArcPars : trajSegPars
 {
-	//所有数据都是正数
+	//除转角外，所有数据都是正数
 	trajSegArcPars() : angle(0.0), trajSegPars()
 	{
 		startPos[0] = 0.0;
 		startPos[1] = 0.0;
 		endPos[0] = 0.0;
 		endPos[1] = 0.0;
+		center[0] = 0.0;
+		center[1] = 0.0;
 	}
 	double startPos[2];
 	double endPos[2];
-	double angle;
+	double center[2];
+	double angle;//正:CCW 负:CW
 }TRAJ_SEG_ARC_PARS;
 
-typedef struct trajSegCurvePars//未使用
+typedef struct singularPointPars
+{
+	singularPointPars() : time(0.0), crackle(0.0), snap(0.0), jerk(0.0), acceleration(0.0), velocity(0.0), distance(0.0){}
+	double time;
+	double crackle;
+	double snap;
+	double jerk;
+	double acceleration;
+	double velocity;
+	double distance;
+}SINGULAR_POINT_PARS;
+
+//未使用
+typedef struct trajSegCurvePars
 {
 	trajSegCurvePars()
 	{
@@ -158,56 +167,46 @@ typedef struct trajSegCurvePars//未使用
 	double maxJerk[2];//正数
 }TRAJ_SEG_CURVE_PARS;
 
-typedef struct singularPointPars
-{
-	singularPointPars() : time(0.0), crackle(0.0), snap(0.0), jerk(0.0), acceleration(0.0), velocity(0.0), distance(0.0){}
-	double time;
-	double crackle;
-	double snap;
-	double jerk;
-	double acceleration;
-	double velocity;
-	double distance;
-}SINGULAR_POINT_PARS;
-
-
-
 
 //API
 typedef struct labelMechInitPars
 {
-	labelMechInitPars():nozzleInterval(0.0),nozzleDeflection(0.0),pShut(nullptr)
+	labelMechInitPars():splineTime(0.0), pShut(nullptr)
 	{
 		axId[0] = 0;
 		axId[1] = 0;
 		cameraPos[0] = 0.0;
 		cameraPos[1] = 0.0;
+		nozzleRelPos1[0] = 0.0;
+		nozzleRelPos1[1] = 0.0;
+		nozzleRelPos2[0] = 0.0;
+		nozzleRelPos2[1] = 0.0;
 	}
 	SAC_AXIS axId[2];//XY轴按顺序储存
-	double cameraPos[2];
-	double nozzleInterval;//吸嘴间隔
-	double nozzleDeflection;//吸嘴连线与X轴偏角，-90~90度
-	void (*pShut)(void);
+	double cameraPos[2];//相机位置
+	double nozzleRelPos1[2];//吸嘴1相对头（？）的位置
+	double nozzleRelPos2[2];//吸嘴2相对头（？）的位置
+	void (*pShut)(void);//拍照回调函数
+	double splineTime;//样条曲线采样点间隔时间，建议0.005
 }LABEL_MECH_INIT_PARS;
 
 typedef struct labelMechMotionPars
 {
-	labelMechMotionPars():cameraVel(0.0),shutterDelay(0.0),splineTime(0.0)
+	labelMechMotionPars():cameraVel(0.0),shutterDelay(0.0),maxVel(0.0),maxAcc(0.0),maxJerk(0.0)
 	{
 		endPos[0] = 0.0;
 		endPos[1] = 0.0;
-		maxVel[0] = 0.0;
-		maxVel[1] = 0.0;
-		maxAcc[0] = 0.0;
-		maxAcc[1] = 0.0;
-		maxJerk[0] = 0.0;
-		maxJerk[1] = 0.0;
+		rotaeRadius[0] = 0.0;
+		rotaeRadius[1] = 0.0;
+		rotaeAngle[0] = 0.0;
+		rotaeAngle[1] = 0.0;
 	}
 	double endPos[2];//目标位置
-	double cameraVel;//通过相机位置的速度
+	double rotaeRadius[2];//两次转向半径,根据估算速度动态调节
+	double rotaeAngle[2];//两次转向角度，正数,大小适中
 	double shutterDelay;//快门延时
-	double maxVel[2];
-	double maxAcc[2];
-	double maxJerk[2];
-	double splineTime;
+	double cameraVel;//吸嘴通过相机位置的速度
+	double maxVel;//吸嘴最大速度
+	double maxAcc;//吸嘴最大加速度
+	double maxJerk;//吸嘴最大加加速度
 }LABEL_MECH_MOTION_PARS;
