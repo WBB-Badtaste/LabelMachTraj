@@ -30,8 +30,6 @@ int _tmain(int argc, _TCHAR* argv[])
 	LABEL_MECH_INIT_PARS initPars;
 	initPars.axId[0] = axId[0];
 	initPars.axId[1] = axId[1];
-	initPars.cameraPos[0] = 245;
-	initPars.cameraPos[1] = 220;
 	initPars.nozzleRelPos1[0] = -10.0;
 	initPars.nozzleRelPos1[1] = -0.1;
 	initPars.nozzleRelPos2[0] = 10.0;
@@ -44,6 +42,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	LABEL_MECH_MOTION_PARS motionPars;
 	motionPars.endPos[0] = 540.0;
 	motionPars.endPos[1] = 620.0;
+	motionPars.cameraPos[0] = 245;
+	motionPars.cameraPos[1] = 220;
 	motionPars.cameraVel = 300.0;
 	motionPars.maxVel  = 300.0;
 	motionPars.maxAcc  = 30000.0;

@@ -14,7 +14,14 @@ LABEL_MECH_PARS mechPars;
 
 using namespace std;
 
-//初始化函数
+/*
+--20150914 Martin
+	初始化函数
+	主要作用是：
+		1.将轴分组，使各轴同步运动；
+		2.将各轴的SETPOINT_POS加入velSet，使读取位置时各轴的位置数据在同一个sample，提高位置的计算精度。
+		3.将不随意变动的数据（包括拍照函数指针）提前保存到mechPars，减少运动函数的传入参数量
+*/
 NYCE_STATUS LabelMechInit(const LABEL_MECH_INIT_PARS &initPars)
 {
 	if (mechPars.haveInited)
@@ -26,9 +33,6 @@ NYCE_STATUS LabelMechInit(const LABEL_MECH_INIT_PARS &initPars)
 
 	mechPars.axId[0] = initPars.axId[0];
 	mechPars.axId[1] = initPars.axId[1];
-
-	mechPars.cameraPos[0] = initPars.cameraPos[0];
-	mechPars.cameraPos[1] = initPars.cameraPos[1];
 
 	mechPars.nozzleRelPos1[0] = initPars.nozzleRelPos1[0];
 	mechPars.nozzleRelPos1[1] = initPars.nozzleRelPos1[1];
@@ -98,15 +102,15 @@ NYCE_STATUS LabelMechMoveOptTrajectory(const LABEL_MECH_MOTION_PARS &motionPars)
 		double arcAngle1[2];//拍照前圆弧始末位值的相对偏角
 		double arcAngle2[2];//拍照后圆弧始末位值的相对偏角
 		
-		if (currentPos[0] < mechPars.cameraPos[0])
+		if (currentPos[0] < motionPars.cameraPos[0])
 		{//从左边进入照相区
 			cameraAngle = atan2(mechPars.nozzleRelPos2[1] - mechPars.nozzleRelPos1[1], mechPars.nozzleRelPos2[0] - mechPars.nozzleRelPos1[0]);
-			firstShutPos[0] = mechPars.cameraPos[0] - (shutDistance + nozzleOffset2) * cos(cameraAngle);
-			firstShutPos[1] = mechPars.cameraPos[1] - (shutDistance + nozzleOffset2) * sin(cameraAngle);
-			secondShutPos[0] = mechPars.cameraPos[0] - (shutDistance - nozzleOffset1) * cos(cameraAngle);
-			secondShutPos[1] = mechPars.cameraPos[1] - (shutDistance - nozzleOffset1) * sin(cameraAngle);
-			finishShutPos[0] = mechPars.cameraPos[0] + nozzleOffset1 * cos(cameraAngle);
-			finishShutPos[1] = mechPars.cameraPos[1] + nozzleOffset1 * sin(cameraAngle);
+			firstShutPos[0]  = motionPars.cameraPos[0] - (shutDistance + nozzleOffset2) * cos(cameraAngle);
+			firstShutPos[1]  = motionPars.cameraPos[1] - (shutDistance + nozzleOffset2) * sin(cameraAngle);
+			secondShutPos[0] = motionPars.cameraPos[0] - (shutDistance - nozzleOffset1) * cos(cameraAngle);
+			secondShutPos[1] = motionPars.cameraPos[1] - (shutDistance - nozzleOffset1) * sin(cameraAngle);
+			finishShutPos[0] = motionPars.cameraPos[0] + nozzleOffset1 * cos(cameraAngle);
+			finishShutPos[1] = motionPars.cameraPos[1] + nozzleOffset1 * sin(cameraAngle);
 			arcAngle1[1] = cameraAngle + M_PI_2;
 			arcAngle1[0] = arcAngle1[1] + motionPars.rotaeAngle[0];
 			arcAngle2[0] = cameraAngle - M_PI_2;
@@ -115,12 +119,12 @@ NYCE_STATUS LabelMechMoveOptTrajectory(const LABEL_MECH_MOTION_PARS &motionPars)
 		else
 		{//从右边进入照相区
 			cameraAngle = atan2(mechPars.nozzleRelPos1[1] - mechPars.nozzleRelPos2[1], mechPars.nozzleRelPos1[0] - mechPars.nozzleRelPos2[0]);
-			firstShutPos[0]  = mechPars.cameraPos[0] - (shutDistance + nozzleOffset1) * cos(cameraAngle);
-			firstShutPos[1]  = mechPars.cameraPos[1] - (shutDistance + nozzleOffset1) * sin(cameraAngle);
-			secondShutPos[0] = mechPars.cameraPos[0] - (shutDistance - nozzleOffset2) * cos(cameraAngle);
-			secondShutPos[1] = mechPars.cameraPos[1] - (shutDistance - nozzleOffset2) * sin(cameraAngle);
-			finishShutPos[0] = mechPars.cameraPos[0] + nozzleOffset2 * cos(cameraAngle);
-			finishShutPos[1] = mechPars.cameraPos[1] + nozzleOffset2 * sin(cameraAngle);
+			firstShutPos[0]  = motionPars.cameraPos[0] - (shutDistance + nozzleOffset1) * cos(cameraAngle);
+			firstShutPos[1]  = motionPars.cameraPos[1] - (shutDistance + nozzleOffset1) * sin(cameraAngle);
+			secondShutPos[0] = motionPars.cameraPos[0] - (shutDistance - nozzleOffset2) * cos(cameraAngle);
+			secondShutPos[1] = motionPars.cameraPos[1] - (shutDistance - nozzleOffset2) * sin(cameraAngle);
+			finishShutPos[0] = motionPars.cameraPos[0] + nozzleOffset2 * cos(cameraAngle);
+			finishShutPos[1] = motionPars.cameraPos[1] + nozzleOffset2 * sin(cameraAngle);
 			arcAngle1[1] = cameraAngle - M_PI_2;
 			arcAngle1[0] = arcAngle1[1] - motionPars.rotaeAngle[0];
 			arcAngle2[0] = cameraAngle + M_PI_2;
@@ -145,9 +149,9 @@ NYCE_STATUS LabelMechMoveOptTrajectory(const LABEL_MECH_MOTION_PARS &motionPars)
 		TRAJ_SEG_LINE_PARS linePars;
 		TRAJ_SEG_ARC_PARS arcPars;
 
-		arcPars.maxVel  = linePars.maxVel	= motionPars.maxVel;
-		arcPars.maxAcc  = linePars.maxAcc	= motionPars.maxAcc;
-		arcPars.maxJerk = linePars.maxJerk	= motionPars.maxJerk;
+		arcPars.maxVel  = linePars.maxVel  = motionPars.maxVel;
+		arcPars.maxAcc  = linePars.maxAcc  = motionPars.maxAcc;
+		arcPars.maxJerk = linePars.maxJerk = motionPars.maxJerk;
 
 		linePars.startPos[0] = currentPos[0];
 		linePars.startPos[1] = currentPos[1];

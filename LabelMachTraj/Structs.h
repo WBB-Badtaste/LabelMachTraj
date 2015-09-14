@@ -1,6 +1,12 @@
 #pragma once
 
-//内部使用
+/*
+--20150914 Martin
+	labelMechPars结构体贯穿整个框架，是所有内部数据的储存点。
+	因为轨迹规划、运动学处理（暂时没有）、发送器三大部分的数据互相交叉，设计一个通用结构体能快速解决问题且方便日后拓展。
+	但是显然而见，这不是一个最好的解决方案，阅读、管理等方面都存在问题。
+	仿照ROCKS的逻辑而设计，不同的是labelMechPars不对用户开放。
+*/
 typedef struct labelMechPars
 {
 	labelMechPars():
@@ -19,8 +25,6 @@ typedef struct labelMechPars
 		axId[1] = 0;
 		varId[0] = 0;
 		varId[1] = 0;
-		cameraPos[0] = 0.0;
-		cameraPos[1] = 0.0;
 		nozzleRelPos1[0] = 0.0;
 		nozzleRelPos1[1] = 0.0;
 		nozzleRelPos2[0] = 0.0;
@@ -38,7 +42,6 @@ typedef struct labelMechPars
 	SAC_AXIS axId[2];
 	SAC_VAR_ID varId[2];
 
-	double cameraPos[2];
 	double nozzleRelPos1[2];
 	double nozzleRelPos2[2];
 
@@ -175,15 +178,12 @@ typedef struct labelMechInitPars
 	{
 		axId[0] = 0;
 		axId[1] = 0;
-		cameraPos[0] = 0.0;
-		cameraPos[1] = 0.0;
 		nozzleRelPos1[0] = 0.0;
 		nozzleRelPos1[1] = 0.0;
 		nozzleRelPos2[0] = 0.0;
 		nozzleRelPos2[1] = 0.0;
 	}
 	SAC_AXIS axId[2];//XY轴按顺序储存
-	double cameraPos[2];//相机位置
 	double nozzleRelPos1[2];//吸嘴1相对头（？）的位置
 	double nozzleRelPos2[2];//吸嘴2相对头（？）的位置
 	void (*pShut)(void);//拍照回调函数
@@ -196,12 +196,15 @@ typedef struct labelMechMotionPars
 	{
 		endPos[0] = 0.0;
 		endPos[1] = 0.0;
+		cameraPos[0] = 0.0;
+		cameraPos[1] = 0.0;
 		rotaeRadius[0] = 0.0;
 		rotaeRadius[1] = 0.0;
 		rotaeAngle[0] = 0.0;
 		rotaeAngle[1] = 0.0;
 	}
 	double endPos[2];//目标位置
+	double cameraPos[2];//相机位置
 	double rotaeRadius[2];//两次转向半径,根据估算速度动态调节
 	double rotaeAngle[2];//两次转向弧度角，正数,大小适中
 	double shutterDelay;//快门延时
