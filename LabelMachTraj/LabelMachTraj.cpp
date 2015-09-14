@@ -15,7 +15,7 @@ using namespace std;
 
 void shutTest()
 {
-	printf("shut!/n");
+	printf("shut!\n");
 }
 
 int _tmain(int argc, _TCHAR* argv[])
@@ -32,11 +32,11 @@ int _tmain(int argc, _TCHAR* argv[])
 	initPars.axId[1] = axId[1];
 	initPars.cameraPos[0] = 245;
 	initPars.cameraPos[1] = 220;
-	initPars.nozzleRelPos1[0] = 10.0;
+	initPars.nozzleRelPos1[0] = -10.0;
 	initPars.nozzleRelPos1[1] = -0.1;
-	initPars.nozzleRelPos2[0] = -10.0;
+	initPars.nozzleRelPos2[0] = 10.0;
 	initPars.nozzleRelPos2[1] = 0.1;
-	initPars.splineTime = 0.005;
+	initPars.splineTime = 0.0002;
 	initPars.pShut = shutTest;
 
 	nyceStatus = NyceError(nyceStatus) ? nyceStatus : LabelMechInit(initPars);
@@ -48,8 +48,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	motionPars.maxVel  = 300.0;
 	motionPars.maxAcc  = 30000.0;
 	motionPars.maxJerk = 3000000.0;
-	motionPars.rotaeAngle[0] = 30;
-	motionPars.rotaeAngle[1] = 30;
+	motionPars.rotaeAngle[0] = M_PI_4;
+	motionPars.rotaeAngle[1] = M_PI_4;
 	motionPars.rotaeRadius[0] = 15;
 	motionPars.rotaeRadius[1] = 15;
 	motionPars.shutterDelay = 0.1;

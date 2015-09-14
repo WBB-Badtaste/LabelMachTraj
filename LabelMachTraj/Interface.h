@@ -8,6 +8,8 @@
 #include <iostream>
 #include <fstream>
 
+#define _OUTPUT_DATAS_
+
 LABEL_MECH_PARS mechPars;
 
 using namespace std;
@@ -161,7 +163,7 @@ NYCE_STATUS LabelMechMoveOptTrajectory(const LABEL_MECH_MOTION_PARS &motionPars)
 		arcPars.endPos[1]	= firstShutPos[1];
 		arcPars.center[0]   = arcCenter1[0];
 		arcPars.center[1]   = arcCenter1[1];
-		arcPars.angle		= motionPars.rotaeAngle[0];
+		arcPars.angle		= arcAngle1[1] - arcAngle1[0];
 		arcPars.startVel	= motionPars.cameraVel;
 		arcPars.endVel		= motionPars.cameraVel;
 		nyceStatus = NyceError(nyceStatus) ? nyceStatus : TrajSegmentCubicArc(arcPars, mechPars, 1);
@@ -171,7 +173,7 @@ NYCE_STATUS LabelMechMoveOptTrajectory(const LABEL_MECH_MOTION_PARS &motionPars)
 		linePars.endPos[0]	 = secondShutPos[0];
 		linePars.endPos[1]	 = secondShutPos[1];
 		linePars.startVel	 = motionPars.cameraVel;
-		linePars.endVel	= motionPars.cameraVel;
+		linePars.endVel		 = motionPars.cameraVel;
 		nyceStatus = NyceError(nyceStatus) ? nyceStatus : TrajSegmentCubicLine(linePars, mechPars, 2);
 
 		linePars.startPos[0] = secondShutPos[0];
@@ -179,7 +181,7 @@ NYCE_STATUS LabelMechMoveOptTrajectory(const LABEL_MECH_MOTION_PARS &motionPars)
 		linePars.endPos[0]	 = finishShutPos[0];
 		linePars.endPos[1]	 = finishShutPos[1];
 		linePars.startVel	 = motionPars.cameraVel;
-		linePars.endVel	= motionPars.cameraVel;
+		linePars.endVel		 = motionPars.cameraVel;
 		nyceStatus = NyceError(nyceStatus) ? nyceStatus : TrajSegmentCubicLine(linePars, mechPars);
 
 		arcPars.startPos[0] = finishShutPos[0];
@@ -188,7 +190,7 @@ NYCE_STATUS LabelMechMoveOptTrajectory(const LABEL_MECH_MOTION_PARS &motionPars)
 		arcPars.endPos[1]	= arcEndPos2[1];
 		arcPars.center[0]   = arcCenter2[0];
 		arcPars.center[1]   = arcCenter2[1];
-		arcPars.angle		= motionPars.rotaeAngle[1];
+		arcPars.angle		= arcAngle2[1] - arcAngle2[0];
 		arcPars.startVel	= motionPars.cameraVel;
 		arcPars.endVel		= motionPars.cameraVel;
 		nyceStatus = NyceError(nyceStatus) ? nyceStatus : TrajSegmentCubicArc(arcPars, mechPars);
@@ -198,10 +200,11 @@ NYCE_STATUS LabelMechMoveOptTrajectory(const LABEL_MECH_MOTION_PARS &motionPars)
 		linePars.endPos[0]	 = motionPars.endPos[0];
 		linePars.endPos[1]	 = motionPars.endPos[1];
 		linePars.startVel	 = motionPars.cameraVel;
-		linePars.endVel	= motionPars.cameraVel;
+		linePars.endVel		 = 0.0;
 		nyceStatus = NyceError(nyceStatus) ? nyceStatus : TrajSegmentCubicLine(linePars, mechPars);
 
 		//≤‚ ‘ ‰≥ˆ
+#ifdef _OUTPUT_DATAS_
 		ofstream file1("..//SegmentDatas.txt");	
 		file1<<"|Index|Distance|Velocity|"<<endl<<"|:-:|:-:|:-:|"<<endl;
 		for (uint32_t i = 0; i < mechPars.usedNrOfCubPars; ++i)
@@ -221,12 +224,13 @@ NYCE_STATUS LabelMechMoveOptTrajectory(const LABEL_MECH_MOTION_PARS &motionPars)
 				<<mechPars.cubPars[0][i].splineId<<"|"<<mechPars.cubPars[1][i].splineId<<"|"<<endl;
 		}
 		file2.close();
+#endif
 		//≤‚ ‘ ‰≥ˆ
 
 		//stream
 		nyceStatus = NyceError(nyceStatus) ? nyceStatus : stream(mechPars);                            
  
-		nyceStatus = NyceError(nyceStatus) ? nyceStatus : streamSync(mechPars, INFINITE);
+		nyceStatus = NyceError(nyceStatus) ? nyceStatus : streamSync(mechPars, SAC_INDEFINITE);
 	}						 
 
 	return nyceStatus;

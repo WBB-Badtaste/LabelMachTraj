@@ -29,7 +29,19 @@ NYCE_STATUS TarjSegmentStart(const TRAJ_SEG_START_PARS &startPars, LABEL_MECH_PA
 	mechPars.maxNrOfCubPars = 256;
 	
 	mechPars.cubPars[0][0].position = startPars.startPos[0];
+	mechPars.cubPars[0][0].velocity = 0;
+	mechPars.cubPars[0][0].splineId = 0;
+	mechPars.cubPars[0][0].time = 0;
+	mechPars.cubPars[0][0].positionReference = SAC_ABSOLUTE;
+	mechPars.cubPars[0][0].generateEvent = TRUE;
+
 	mechPars.cubPars[1][0].position = startPars.startPos[1];
+	mechPars.cubPars[1][0].velocity = 0;
+	mechPars.cubPars[1][0].splineId = 0;
+	mechPars.cubPars[1][0].time = 0;
+	mechPars.cubPars[1][0].positionReference = SAC_ABSOLUTE;
+	mechPars.cubPars[1][0].generateEvent = FALSE;
+
 	mechPars.usedNrOfCubPars = 1;
 
 	return NYCE_OK; 
@@ -117,39 +129,43 @@ NYCE_STATUS CalacCubicMotionBasePars(TRAJ_SEG_PARS *pSegPars)
 NYCE_STATUS CalacSegDistance(const uint32_t &splineNum, const TRAJ_SEG_PARS* const pSegPars, LABEL_MECH_PARS &mechPars)
 {
 	//计算12个奇点的运动参数
-	SINGULAR_POINT_PARS singularPointPars[12];
+	SINGULAR_POINT_PARS singularPointPars[13];
 	double time(- pSegPars->time[0]);
-	for (uint32_t i = 0; i < 12; ++i)
+	for (uint32_t i = 0; i < 13; ++i)
 	{
 		switch(i)
 		{
-		case 4:
+		case 2:
 			time += pSegPars->time[0];
 		case 0:
-		case 2:
+		case 4:
 			time += pSegPars->time[0];
 			singularPointPars[i].crackle =  pSegPars->crackle[0];
 			break;
-		case 1:
+		case 5:
 			time += pSegPars->time[0];
 		case 3:
-		case 5:
+		case 1:
 			time += pSegPars->time[0];
 			singularPointPars[i].crackle = -pSegPars->crackle[0];
 			break;
-		case 10:
-			time += pSegPars->time[1];
 		case 6:
+			time += pSegPars->time[0];
+			singularPointPars[i].crackle =  pSegPars->crackle[1];
+			break;
 		case 8:
+			time += pSegPars->time[1];
+		case 10:
+		case 12:
 			time += pSegPars->time[1];
 			singularPointPars[i].crackle =  pSegPars->crackle[1];
 			break;
-		case 7:
-			time += pSegPars->time[1];
-		case 9:
 		case 11:
 			time += pSegPars->time[1];
-			singularPointPars[i].crackle = -pSegPars->crackle[2];
+		case 7:
+		case 9:
+			time += pSegPars->time[1];
+			singularPointPars[i].crackle = -pSegPars->crackle[1];
 			break;
 		default:
 			break;
@@ -182,47 +198,47 @@ NYCE_STATUS CalacSegDistance(const uint32_t &splineNum, const TRAJ_SEG_PARS* con
 	}
 
 	//计算segments
-	const double pow_baseSplintTime_2(pow(mechPars.baseSplineTime, 2));
-	const double pow_baseSplintTime_3(pow(mechPars.baseSplineTime, 3));
-	const double pow_baseSplintTime_4(pow(mechPars.baseSplineTime, 4));
-	const double pow_baseSplintTime_5(pow(mechPars.baseSplineTime, 5));
+	const double pow_baseSplintTime_2(mechPars.baseSplineTime * mechPars.baseSplineTime);
+	const double pow_baseSplintTime_3(pow_baseSplintTime_2 * mechPars.baseSplineTime);
+	const double pow_baseSplintTime_4(pow_baseSplintTime_3 * mechPars.baseSplineTime);
+	const double pow_baseSplintTime_5(pow_baseSplintTime_4 * mechPars.baseSplineTime);
 
 	double currentTime(0.0);
 	double crackle(0.0), snap(0.0), jerk(0.0), acceleration(0.0);
 
-	uint32_t index(0);
-	uint32_t singularIndex(0);
-	for (; index < splineNum - 1; ++index)
+	uint32_t index(mechPars.usedNrOfCubPars);
+	for (uint32_t i = 0, singularIndex = 0; i < splineNum - 1; ++i, ++index)
 	{
-		currentTime = (index + 1) * mechPars.baseSplineTime;
-		if (currentTime > singularPointPars[singularIndex].time)
+		currentTime = (i + 1) * mechPars.baseSplineTime;
+		if (currentTime >= singularPointPars[singularIndex].time)
 		{
 			const double segTime(currentTime - singularPointPars[singularIndex].time);
-			const double pow_segTime_2(pow(mechPars.baseSplineTime, 2));
-			const double pow_segTime_3(pow(mechPars.baseSplineTime, 3));
-			const double pow_segTime_4(pow(mechPars.baseSplineTime, 4));
-			const double pow_segTime_5(pow(mechPars.baseSplineTime, 5));
+			const double pow_segTime_2(segTime * segTime);
+			const double pow_segTime_3(pow_segTime_2 * segTime);
+			const double pow_segTime_4(pow_segTime_3 * segTime);
+			const double pow_segTime_5(pow_segTime_4 * segTime);
 
-			mechPars.segDistance[mechPars.usedNrOfCubPars + index] = singularPointPars[singularIndex].distance     + singularPointPars[singularIndex].velocity     * segTime + 0.5 * singularPointPars[singularIndex].acceleration * pow_segTime_2 + singularPointPars[singularIndex].jerk    * pow_segTime_3 / 6 + singularPointPars[singularIndex].snap    * pow_segTime_4 / 24 + singularPointPars[singularIndex].crackle * pow_segTime_5 / 120;
-			mechPars.segVelocity[mechPars.usedNrOfCubPars + index] = singularPointPars[singularIndex].velocity     + singularPointPars[singularIndex].acceleration * segTime + 0.5 * singularPointPars[singularIndex].jerk         * pow_segTime_2 + singularPointPars[singularIndex].snap    * pow_segTime_3 / 6 + singularPointPars[singularIndex].crackle * pow_segTime_4 / 24;
-			acceleration										   = singularPointPars[singularIndex].acceleration + singularPointPars[singularIndex].jerk         * segTime + 0.5 * singularPointPars[singularIndex].snap         * pow_segTime_2 + singularPointPars[singularIndex].crackle * pow_segTime_3 / 6;
-			jerk												   = singularPointPars[singularIndex].jerk         + singularPointPars[singularIndex].snap         * segTime + 0.5 * singularPointPars[singularIndex].crackle      * pow_segTime_2;
-			snap												   = singularPointPars[singularIndex].snap         + singularPointPars[singularIndex].crackle      * segTime;
+			mechPars.segDistance[index] = singularPointPars[singularIndex].distance     + singularPointPars[singularIndex].velocity     * segTime + 0.5 * singularPointPars[singularIndex].acceleration * pow_segTime_2 + singularPointPars[singularIndex].jerk    * pow_segTime_3 / 6 + singularPointPars[singularIndex].snap    * pow_segTime_4 / 24 + singularPointPars[singularIndex].crackle * pow_segTime_5 / 120;
+			mechPars.segVelocity[index] = singularPointPars[singularIndex].velocity     + singularPointPars[singularIndex].acceleration * segTime + 0.5 * singularPointPars[singularIndex].jerk         * pow_segTime_2 + singularPointPars[singularIndex].snap    * pow_segTime_3 / 6 + singularPointPars[singularIndex].crackle * pow_segTime_4 / 24;
+			acceleration				= singularPointPars[singularIndex].acceleration + singularPointPars[singularIndex].jerk         * segTime + 0.5 * singularPointPars[singularIndex].snap         * pow_segTime_2 + singularPointPars[singularIndex].crackle * pow_segTime_3 / 6;
+			jerk						= singularPointPars[singularIndex].jerk         + singularPointPars[singularIndex].snap         * segTime + 0.5 * singularPointPars[singularIndex].crackle      * pow_segTime_2;
+			snap						= singularPointPars[singularIndex].snap         + singularPointPars[singularIndex].crackle      * segTime;
+			crackle						= singularPointPars[singularIndex].crackle;
 
 			++singularIndex;
 		}
 		else
 		{
-			mechPars.segDistance[mechPars.usedNrOfCubPars + index] = mechPars.segDistance[mechPars.usedNrOfCubPars + index - 1] + mechPars.segVelocity[mechPars.usedNrOfCubPars + index - 1] * mechPars.baseSplineTime + 0.5 * acceleration                             * pow_baseSplintTime_2 + jerk									  * pow_baseSplintTime_3 / 6 + snap									    * pow_baseSplintTime_4 / 24 + singularPointPars[singularIndex].crackle * pow_baseSplintTime_5 / 120;
-			mechPars.segVelocity[mechPars.usedNrOfCubPars + index] = mechPars.segVelocity[mechPars.usedNrOfCubPars + index - 1] + acceleration												 * mechPars.baseSplineTime + 0.5 * jerk			                            * pow_baseSplintTime_2 + snap									  * pow_baseSplintTime_3 / 6 + singularPointPars[singularIndex].crackle * pow_baseSplintTime_4 / 24;
-			acceleration										  +=															  jerk														 * mechPars.baseSplineTime + 0.5 * snap			                            * pow_baseSplintTime_2 + singularPointPars[singularIndex].crackle * pow_baseSplintTime_3 / 6;
-			jerk												  +=															  snap														 * mechPars.baseSplineTime + 0.5 * singularPointPars[singularIndex].crackle * pow_baseSplintTime_2;
-			snap												  +=															  singularPointPars[singularIndex].crackle                   * mechPars.baseSplineTime;
+			mechPars.segDistance[index] = mechPars.segDistance[index - 1] + mechPars.segVelocity[index - 1]	* mechPars.baseSplineTime + 0.5 * acceleration * pow_baseSplintTime_2 + jerk	* pow_baseSplintTime_3 / 6 + snap	 * pow_baseSplintTime_4 / 24 + crackle * pow_baseSplintTime_5 / 120;
+			mechPars.segVelocity[index] = mechPars.segVelocity[index - 1] + acceleration					* mechPars.baseSplineTime + 0.5 * jerk		   * pow_baseSplintTime_2 + snap	* pow_baseSplintTime_3 / 6 + crackle * pow_baseSplintTime_4 / 24;
+			acceleration			   +=								    jerk							* mechPars.baseSplineTime + 0.5 * snap		   * pow_baseSplintTime_2 + crackle * pow_baseSplintTime_3 / 6;
+			jerk					   +=								    snap							* mechPars.baseSplineTime + 0.5 * crackle	   * pow_baseSplintTime_2;
+			snap					   +=								    crackle							* mechPars.baseSplineTime;
 		}
 	}
 
-	mechPars.segDistance[mechPars.usedNrOfCubPars + index] = pSegPars->distance;
-	mechPars.segVelocity[mechPars.usedNrOfCubPars + index] = pSegPars->endVel;
+	mechPars.segDistance[index] = pSegPars->distance;
+	mechPars.segVelocity[index] = pSegPars->endVel;
 	mechPars.lastSplineTime = pSegPars->time[0] * 8 + pSegPars->time[1] * 8 - (splineNum - 1) * mechPars.baseSplineTime;
 
 	return NYCE_OK;
@@ -277,6 +293,12 @@ NYCE_STATUS TrajSegmentCubicLine(TRAJ_SEG_LINE_PARS &linePars, LABEL_MECH_PARS &
 		mechPars.cubPars[1][mechPars.usedNrOfCubPars].time = mechPars.baseSplineTime;
 		mechPars.cubPars[1][mechPars.usedNrOfCubPars].positionReference = SAC_ABSOLUTE;
 		mechPars.cubPars[1][mechPars.usedNrOfCubPars].generateEvent = FALSE;
+
+		if (shutIndex)
+		{
+			mechPars.cubPars[0][mechPars.usedNrOfCubPars].generateEvent = TRUE;
+			mechPars.shutId[shutIndex - 1] = mechPars.usedNrOfCubPars;
+		}
 	}
 
 	mechPars.cubPars[0][mechPars.usedNrOfCubPars].position = linePars.endPos[0];
@@ -294,12 +316,6 @@ NYCE_STATUS TrajSegmentCubicLine(TRAJ_SEG_LINE_PARS &linePars, LABEL_MECH_PARS &
 	mechPars.cubPars[1][mechPars.usedNrOfCubPars].generateEvent = FALSE;
 
 	++mechPars.usedNrOfCubPars;
-
-	if (shutIndex)
-	{
-		mechPars.cubPars[0][mechPars.usedNrOfCubPars].generateEvent = TRUE;
-		mechPars.shutId[shutIndex - 1] = mechPars.usedNrOfCubPars;
-	}
 
 	return NYCE_OK;
 } 
@@ -339,10 +355,10 @@ NYCE_STATUS TrajSegmentCubicArc(TRAJ_SEG_ARC_PARS &arcPars, LABEL_MECH_PARS &mec
 
 	for (uint32_t index = 0; index < splineNum; ++index, ++mechPars.usedNrOfCubPars)
 	{
-		const double currentAngle(arcPars.angle > 0 ? startAngle - mechPars.segDistance[mechPars.usedNrOfCubPars] / radius : startAngle + mechPars.segDistance[mechPars.usedNrOfCubPars] / radius);
+		const double currentAngle(arcPars.angle > 0 ? startAngle + mechPars.segDistance[mechPars.usedNrOfCubPars] / radius : startAngle - mechPars.segDistance[mechPars.usedNrOfCubPars] / radius);
 		const double cosAngle(cos(currentAngle));
 		const double sinAngle(sin(currentAngle));
-		const double velocity(arcPars.angle > 0 ? mechPars.segVelocity[mechPars.usedNrOfCubPars] : -mechPars.segVelocity[mechPars.usedNrOfCubPars]);
+		const double velocity(arcPars.angle > 0 ? mechPars.segVelocity[mechPars.usedNrOfCubPars] : -mechPars.segVelocity[mechPars.usedNrOfCubPars]);//逆时针旋转的速度方向为正
 
 		if (index == splineNum - 1)
 		{
@@ -359,29 +375,29 @@ NYCE_STATUS TrajSegmentCubicArc(TRAJ_SEG_ARC_PARS &arcPars, LABEL_MECH_PARS &mec
 			mechPars.cubPars[1][mechPars.usedNrOfCubPars].time = mechPars.lastSplineTime;
 			mechPars.cubPars[1][mechPars.usedNrOfCubPars].positionReference = SAC_ABSOLUTE;
 			mechPars.cubPars[1][mechPars.usedNrOfCubPars].generateEvent = FALSE;
+
+			if (shutIndex)
+			{
+				mechPars.cubPars[0][mechPars.usedNrOfCubPars].generateEvent = TRUE;
+				mechPars.shutId[shutIndex - 1] = mechPars.usedNrOfCubPars;
+			}
 		}
 		else
 		{
-			mechPars.cubPars[0][mechPars.usedNrOfCubPars].position = arcPars.startPos[0] + radius * cosAngle;
+			mechPars.cubPars[0][mechPars.usedNrOfCubPars].position = arcPars.center[0] + radius * cosAngle;
 			mechPars.cubPars[0][mechPars.usedNrOfCubPars].velocity = -velocity * sinAngle;
 			mechPars.cubPars[0][mechPars.usedNrOfCubPars].splineId = mechPars.usedNrOfCubPars;
 			mechPars.cubPars[0][mechPars.usedNrOfCubPars].time = mechPars.baseSplineTime;
 			mechPars.cubPars[0][mechPars.usedNrOfCubPars].positionReference = SAC_ABSOLUTE;
 			mechPars.cubPars[0][mechPars.usedNrOfCubPars].generateEvent = mechPars.usedNrOfCubPars % mechPars.perSendSplineNum == 0 ? TRUE : FALSE;
 
-			mechPars.cubPars[1][mechPars.usedNrOfCubPars].position = arcPars.startPos[1] + radius * sinAngle;
+			mechPars.cubPars[1][mechPars.usedNrOfCubPars].position = arcPars.center[1] + radius * sinAngle;
 			mechPars.cubPars[1][mechPars.usedNrOfCubPars].velocity = velocity * cosAngle;
 			mechPars.cubPars[1][mechPars.usedNrOfCubPars].splineId = mechPars.usedNrOfCubPars;
 			mechPars.cubPars[1][mechPars.usedNrOfCubPars].time = mechPars.baseSplineTime;
 			mechPars.cubPars[1][mechPars.usedNrOfCubPars].positionReference = SAC_ABSOLUTE;
 			mechPars.cubPars[1][mechPars.usedNrOfCubPars].generateEvent = FALSE;
 		}
-	}
-
-	if (shutIndex)
-	{
-		mechPars.cubPars[0][mechPars.usedNrOfCubPars].generateEvent = TRUE;
-		mechPars.shutId[shutIndex - 1] = mechPars.usedNrOfCubPars;
 	}
 
 	return NYCE_OK;

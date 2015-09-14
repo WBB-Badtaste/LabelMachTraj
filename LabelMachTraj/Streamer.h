@@ -124,7 +124,7 @@ NYCE_STATUS stream(LABEL_MECH_PARS &mechPars)
 
 	nyceStatus = NyceError(nyceStatus) ? nyceStatus : SacDefineEventEnrolment(mechPars.axId[0], SAC_EV_INTERPOLANT_STARTED, EventThrd, &mechPars);
 	
-	hThread = (HANDLE)_beginthreadex(NULL, 0, SendSplineThrd, (LPVOID)&mechPars, 0, &threadID);
+	hThread = NyceError(nyceStatus) ? hThread : (HANDLE)_beginthreadex(NULL, 0, SendSplineThrd, (LPVOID)&mechPars, 0, &threadID);
 	
 	return nyceStatus;
 }

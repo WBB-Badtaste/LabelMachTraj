@@ -203,7 +203,7 @@ typedef struct labelMechMotionPars
 	}
 	double endPos[2];//目标位置
 	double rotaeRadius[2];//两次转向半径,根据估算速度动态调节
-	double rotaeAngle[2];//两次转向角度，正数,大小适中
+	double rotaeAngle[2];//两次转向弧度角，正数,大小适中
 	double shutterDelay;//快门延时
 	double cameraVel;//吸嘴通过相机位置的速度
 	double maxVel;//吸嘴最大速度
