@@ -80,12 +80,34 @@ NYCE_STATUS BufferManager(const uint32_t &splineNum, LABEL_MECH_PARS &mechPars)
 	return NYCE_OK;
 }
 
+/*
+	--20150915 Martin
+	使用3次方加速度方程组，即5次方路程方程组，参照ROCKS的轨迹规划定义制作。
+
+	crackle：加加加加速度
+	snap：加加加速度
+	jerk：加加速度
+	acceleration：加速度
+	velocity：速度
+
+	算法整个路程分配可以分为两大段，前一段由初始速度加速到最大速度，后一段由最大速度减速到末速度
+	两大段的路程是总路程按速度变化量的平方的比值分配得到。
+	每大段又分为等时值的8小段，这8小段的crackle有规律地跳变，使每大段的首尾snap、jerk、acceleration为0；
+	因此，crackle有两个，时值time也有两个。
+*/
+
 //计算三次方加速度运动参数,不适合考虑方向的情况
 NYCE_STATUS CalacCubicMotionBasePars(TRAJ_SEG_PARS *pSegPars)
 {
 	//计算
-	pSegPars->time[0] = pSegPars->distance / (pSegPars->startVel + pSegPars->maxVel) * 0.125;
-	pSegPars->time[1] = pSegPars->distance / (pSegPars->endVel + pSegPars->maxVel) * 0.125;
+	double weight1((pSegPars->startVel - pSegPars->maxVel) * (pSegPars->startVel - pSegPars->maxVel));
+	double weight2((pSegPars->endVel - pSegPars->maxVel) * (pSegPars->endVel - pSegPars->maxVel));
+
+	if (!weight1 && !weight2)//匀速运动就平均分配
+		weight1 = weight2 = 1;
+
+	pSegPars->time[0] = pSegPars->distance * weight1 / (weight1 + weight2) / (pSegPars->startVel + pSegPars->maxVel) * 0.25;
+	pSegPars->time[1] = pSegPars->distance * weight2 / (weight1 + weight2) / (pSegPars->endVel + pSegPars->maxVel) * 0.25;
 
 	const double pow_time1_2(pSegPars->time[0] * pSegPars->time[0]);
 	const double pow_time1_3(pow_time1_2 * pSegPars->time[0]);
@@ -94,8 +116,8 @@ NYCE_STATUS CalacCubicMotionBasePars(TRAJ_SEG_PARS *pSegPars)
 	const double pow_time2_3(pow_time2_2 * pSegPars->time[1]);
 	const double pow_time2_4(pow_time2_3 * pSegPars->time[1]);
 
-	pSegPars->crackle[0] = (pSegPars->maxVel - pSegPars->startVel) / pow_time1_4 * 0.125;
-	pSegPars->crackle[1] = (pSegPars->endVel - pSegPars->maxVel) / pow_time2_4 * 0.125;
+	pSegPars->crackle[0] = pSegPars->time[0] ? (pSegPars->maxVel - pSegPars->startVel) / pow_time1_4 * 0.125 : 0;
+	pSegPars->crackle[1] = pSegPars->time[1] ? (pSegPars->endVel - pSegPars->maxVel) / pow_time2_4 * 0.125 : 0;
 
 	const double maxJerk0(2 * pSegPars->crackle[0] * pow_time1_2);
 	const double maxJerk1(2 * pSegPars->crackle[1] * pow_time2_2);
@@ -125,7 +147,7 @@ NYCE_STATUS CalacCubicMotionBasePars(TRAJ_SEG_PARS *pSegPars)
 	return NYCE_OK;
 }
 
-//计算所有关键点对应的路程
+//计算所有关键点(TCP)对应的路程
 NYCE_STATUS CalacSegDistance(const uint32_t &splineNum, const TRAJ_SEG_PARS* const pSegPars, LABEL_MECH_PARS &mechPars)
 {
 	//计算12个奇点的运动参数
@@ -264,7 +286,7 @@ NYCE_STATUS TrajSegmentCubicLine(TRAJ_SEG_LINE_PARS &linePars, LABEL_MECH_PARS &
 	const double dSplineNum((linePars.time[0] * 8 + linePars.time[1] * 8) / mechPars.baseSplineTime); 
 	uint32_t splineNum((uint32_t)dSplineNum);
 
-	if (dSplineNum - (double)splineNum > mechPars.lessSplineTime)
+	if ((dSplineNum - (double)splineNum) * mechPars.baseSplineTime > mechPars.lessSplineTime)
 		splineNum++;
 
 	//管理缓冲区

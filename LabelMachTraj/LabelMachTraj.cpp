@@ -34,13 +34,13 @@ int _tmain(int argc, _TCHAR* argv[])
 	initPars.nozzleRelPos1[1] = -0.1;
 	initPars.nozzleRelPos2[0] = 10.0;
 	initPars.nozzleRelPos2[1] = 0.1;
-	initPars.splineTime = 0.0002;
+	initPars.splineTime = 0.005;
 	initPars.pShut = shutTest;
 
 	nyceStatus = NyceError(nyceStatus) ? nyceStatus : LabelMechInit(initPars);
 
 	LABEL_MECH_MOTION_PARS motionPars;
-	motionPars.endPos[0] = 540.0;
+	motionPars.endPos[0] = 240.0;
 	motionPars.endPos[1] = 620.0;
 	motionPars.cameraPos[0] = 245;
 	motionPars.cameraPos[1] = 220;
@@ -48,10 +48,6 @@ int _tmain(int argc, _TCHAR* argv[])
 	motionPars.maxVel  = 300.0;
 	motionPars.maxAcc  = 30000.0;
 	motionPars.maxJerk = 3000000.0;
-	motionPars.rotaeAngle[0] = M_PI_4;
-	motionPars.rotaeAngle[1] = M_PI_4;
-	motionPars.rotaeRadius[0] = 15;
-	motionPars.rotaeRadius[1] = 15;
 	motionPars.shutterDelay = 0.1;
 	
 	nyceStatus = NyceError(nyceStatus) ? nyceStatus : LabelMechMoveOptTrajectory(motionPars);

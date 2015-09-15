@@ -33,6 +33,8 @@ typedef struct labelMechPars
 		cubPars[1] = nullptr;
 		shutId[0] = 0;
 		shutId[1] = 0;
+		radiusFactor[0] = 0.0;
+		radiusFactor[1] = 0.0;
 	}
 
 	BOOL haveInited;
@@ -50,6 +52,8 @@ typedef struct labelMechPars
 	double *segVelocity;
 	uint32_t perSendSplineNum;
 	uint32_t haveSentSplineNum;
+
+	double radiusFactor[2];//半径因子，用于根据速度调整转向圆弧的半径
 
 	double baseSplineTime;
 	double lessSplineTime;//segment太多，lessSplineTime太小，可能存在发送数据来不及的情况
@@ -198,15 +202,15 @@ typedef struct labelMechMotionPars
 		endPos[1] = 0.0;
 		cameraPos[0] = 0.0;
 		cameraPos[1] = 0.0;
-		rotaeRadius[0] = 0.0;
-		rotaeRadius[1] = 0.0;
-		rotaeAngle[0] = 0.0;
-		rotaeAngle[1] = 0.0;
+// 		rotaeRadius[0] = 0.0;
+// 		rotaeRadius[1] = 0.0;
+// 		rotaeAngle[0] = 0.0;
+// 		rotaeAngle[1] = 0.0;
 	}
 	double endPos[2];//目标位置
 	double cameraPos[2];//相机位置
-	double rotaeRadius[2];//两次转向半径,根据估算速度动态调节
-	double rotaeAngle[2];//两次转向弧度角，正数,大小适中
+// 	double rotaeRadius[2];//两次转向半径,根据估算速度动态调节
+// 	double rotaeAngle[2];//两次转向弧度角，正数,大小适中
 	double shutterDelay;//快门延时
 	double cameraVel;//吸嘴通过相机位置的速度
 	double maxVel;//吸嘴最大速度
