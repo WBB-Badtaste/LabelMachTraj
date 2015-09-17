@@ -7,6 +7,8 @@
 
 #include <Windows.h>
 
+#define SIM_MOD
+
 #define NUM_AXES 2
 const char *axName[ NUM_AXES ] = { "DEF_AXIS_4", "DEF_AXIS_5" };
 SAC_AXIS axId[NUM_AXES];
@@ -22,8 +24,11 @@ int _tmain(int argc, _TCHAR* argv[])
 {
 	NYCE_STATUS nyceStatus(NYCE_OK);
 
+#ifdef SIM_MOD
 	nyceStatus = NyceInit(NYCE_SIM);
-	//nyceStatus = NyceInit(NYCE_ETH);
+#else:
+	nyceStatus = NyceInit(NYCE_ETH);
+#endif
 
 	nyceStatus = NyceError(nyceStatus) ? nyceStatus : InitAxisRexroth(NUM_AXES, axId, axName);
 
@@ -49,7 +54,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	motionPars.maxAcc  = 30000.0;
 	motionPars.maxJerk = 3000000.0;
 	motionPars.shutterDelay = 0.1;
-	
+
 	nyceStatus = NyceError(nyceStatus) ? nyceStatus : LabelMechMoveOptTrajectory(motionPars);
 
 	nyceStatus = NyceError(nyceStatus) ? nyceStatus : LabelMechTerm();

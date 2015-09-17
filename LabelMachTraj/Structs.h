@@ -33,7 +33,7 @@ typedef struct labelMechPars
 		cubPars[1] = nullptr;
 		shutId[0] = 0;
 		shutId[1] = 0;
-		radiusFactor[0] = 0.0;
+		radiusFactor[0] = 0.0;//小心处理这个参数，要先按实际情况做一次理论计算
 		radiusFactor[1] = 0.0;
 	}
 
