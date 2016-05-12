@@ -79,6 +79,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AxisControl.h" />
+    <ClInclude Include="CubicSpline.h" />
     <ClInclude Include="Streamer.h" />
     <ClInclude Include="Structs.h" />
     <ClInclude Include="Trajectory.h" />

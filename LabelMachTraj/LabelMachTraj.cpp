@@ -47,8 +47,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	LABEL_MECH_MOTION_PARS motionPars;
 	motionPars.endPos[0] = 240.0;
 	motionPars.endPos[1] = 620.0;
-	motionPars.cameraPos[0] = 245;
-	motionPars.cameraPos[1] = 220;
+	motionPars.cameraPos[0] = 245.0;
+	motionPars.cameraPos[1] = 220.0;
 	motionPars.cameraVel = 300.0;
 	motionPars.maxVel  = 300.0;
 	motionPars.maxAcc  = 30000.0;
